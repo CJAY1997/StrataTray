@@ -1,0 +1,40 @@
+# 本地构建产物
+build/
+release/
+debug/
+out/
+Makefile*
+.qmake.stash
+*.user
+*.user.*
+*.autosave
+
+# CMake / IDE 本机配置
+CMakeSettings.json
+CMakeUserPresets.json
+.vs/
+.vscode/
+.idea/
+
+# 编译器中间文件
+*.obj
+*.pdb
+*.ilk
+*.exp
+*.lib
+*.idb
+*.res
+moc_*
+qrc_*
+ui_*
+
+# 本机运行数据（按需忽略）
+*.log
+.version-check.json
+.strata-bg.pid
+
+# 系统 / 编辑器
+Thumbs.db
+.DS_Store
+*.swp
+*~
