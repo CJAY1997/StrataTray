@@ -41,7 +41,7 @@
   "no_update_running": "尚未开始更新",
   "none": "无",
   "open_log_file": "打开日志文件",
-  "open_webui": "打开网页",
+  "open_webui": "打开网页 WebUI",
   "pending_commits_latest_10": "待更新的提交（最近 10 条）",
   "pid_n_uptime_n": "PID %1 · 已运行 %2",
   "process": "进程",

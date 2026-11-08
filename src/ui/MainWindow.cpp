@@ -583,6 +583,10 @@ QString MainWindow::elapsedText() const {
 }
 
 void MainWindow::refreshActionButtons() {
+    // 文案与「启用/样式」分离：无论状态怎么切，两个按钮的文字都不会消失
+    m_btnStop->setText(L("stop_service_free_vram"));
+    m_btnOpen->setText(L("open_webui"));
+
     if (m_updateMode) {
         m_btnStart->setText(L("start_service"));
         m_btnStart->setEnabled(false);
@@ -719,6 +723,10 @@ void MainWindow::retranslateUi() {
     m_actOpenDir->setText(L("menu_open_strata_dir"));
     m_urlCap->setText(L("url"));
     m_vramCap->setText(L("vram"));
+    // 三个主操作按钮的基准文案；状态相关的改写（加载中 / 运行中）由 refreshActionButtons 接管
+    m_btnStart->setText(L("start_service"));
+    m_btnStop->setText(L("stop_service_free_vram"));
+    m_btnOpen->setText(L("open_webui"));
     m_btnCopyBase->setText(L("copy_base"));
     m_btnCopyApi->setText(L("copy_v1"));
     m_btnCopyApi->setToolTip(L("copy_the_openai_compatible_endpoint_n_v1").arg(Config::url()));
