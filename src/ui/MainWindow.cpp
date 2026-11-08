@@ -4,7 +4,10 @@
 #include "core/Config.h"
 
 #include <QtCore/QTimer>
+#include <QtCore/QPoint>
+#include <QtCore/QSignalBlocker>
 #include <QtCore/QUrl>
+#include <QtGui/QAction>
 #include <QtGui/QClipboard>
 #include <QtGui/QCloseEvent>
 #include <QtGui/QCursor>
@@ -18,6 +21,7 @@
 #include <QtWidgets/QFrame>
 #include <QtWidgets/QHBoxLayout>
 #include <QtWidgets/QLabel>
+#include <QtWidgets/QMenu>
 #include <QtWidgets/QProgressBar>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QSizePolicy>
@@ -75,8 +79,6 @@ MainWindow::MainWindow(QWidget *parent) : QWidget(parent) {
         if (!m_releaseUrl.isEmpty()) QDesktopServices::openUrl(QUrl(m_releaseUrl));
     });
     connect(m_btnUpdate, &QPushButton::clicked, this, &MainWindow::updateRequested);
-    // 右上角语言按钮：与托盘菜单共用同一个 I18n 单例，切换后两处同步刷新
-    connect(m_btnLang, &QPushButton::clicked, this, [] { I18n::instance().toggle(); });
 
     auto *refreshShortcut = new QShortcut(QKeySequence(Qt::Key_F5), this);
     refreshShortcut->setContext(Qt::WindowShortcut);
@@ -93,6 +95,43 @@ void MainWindow::buildUi() {
     auto *root = new QVBoxLayout(this);
     root->setContentsMargins(16, 14, 16, 14);
     root->setSpacing(12);
+
+    // 顶层工具栏：只在最右侧放「设置 / 更多」按钮，双卡片保持完整平齐
+    auto *topBar = new QHBoxLayout();
+    topBar->setContentsMargins(0, 0, 0, 0);
+    topBar->setSpacing(0);
+    topBar->addStretch(1);
+    m_btnSettings = new QPushButton(QString::fromUtf8("⚙"), this);
+    m_btnSettings->setObjectName(QStringLiteral("btnGhost"));   // 无背景，悬停微亮
+    m_btnSettings->setFixedSize(30, 26);
+    m_btnSettings->setCursor(QCursor(Qt::PointingHandCursor));
+    topBar->addWidget(m_btnSettings);
+    root->addLayout(topBar);
+
+    // 弹出菜单（沿用全局深色 QMenu 样式）
+    m_settingsMenu = new QMenu(this);
+    m_actLang = m_settingsMenu->addAction(QString());
+    connect(m_actLang, &QAction::triggered, this, [] { I18n::instance().toggle(); });
+
+    m_settingsMenu->addSeparator();
+    m_actAutoRun = m_settingsMenu->addAction(QString());
+    m_actAutoRun->setCheckable(true);
+    m_actAutoRun->setChecked(Config::autoRunEnabled());   // 先设状态再 connect，避免初始化误写注册表
+    connect(m_actAutoRun, &QAction::toggled, this, [this](bool on) {
+        Config::setAutoRun(on);
+        emit autoRunChanged(on);                          // 同步托盘菜单的勾选状态
+    });
+
+    m_actOpenDir = m_settingsMenu->addAction(QString());
+    connect(m_actOpenDir, &QAction::triggered, this, [] {
+        QDesktopServices::openUrl(QUrl::fromLocalFile(Config::instance().root()));
+    });
+
+    connect(m_btnSettings, &QPushButton::clicked, this, [this] {
+        // 在按钮正下方弹出，避免遮住卡片
+        m_settingsMenu->exec(m_btnSettings->mapToGlobal(
+            QPoint(0, m_btnSettings->height() + 4)));
+    });
 
     auto *cards = new QHBoxLayout();
     cards->setSpacing(12);
@@ -178,23 +217,12 @@ void MainWindow::buildUi() {
     auto *verTitleRow = new QHBoxLayout();
     m_verTitle = new QLabel(ver);
     m_verTitle->setObjectName(QStringLiteral("cardTitle"));
-    m_btnLang = new QPushButton(ver);
-    m_btnLang->setObjectName(QStringLiteral("btnMini"));   // 迷你按钮基础样式
-    m_btnLang->setProperty("langToggle", true);             // 主题中额外给蓝色强调，更显眼
-    m_btnLang->setCursor(QCursor(Qt::PointingHandCursor));
-    m_btnLang->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
-    verTitleRow->addWidget(m_verTitle);
-    verTitleRow->addStretch(1);
-    verTitleRow->addWidget(m_btnLang);                      // 窗口右上角
-    vv->addLayout(verTitleRow);
-
-    // 版本状态徽章独占一行并右对齐，避免与标题、语言按钮挤在同一行溢出
     m_versionBadge = new QLabel(ver);
     m_versionBadge->setObjectName(QStringLiteral("verBadge"));
-    auto *verBadgeRow = new QHBoxLayout();
-    verBadgeRow->addStretch(1);
-    verBadgeRow->addWidget(m_versionBadge);
-    vv->addLayout(verBadgeRow);
+    verTitleRow->addWidget(m_verTitle);
+    verTitleRow->addStretch(1);
+    verTitleRow->addWidget(m_versionBadge);
+    vv->addLayout(verTitleRow);
 
     m_localInfo = new QLabel(ver);
     m_remoteInfo = new QLabel(ver);
@@ -327,6 +355,12 @@ void MainWindow::showEvent(QShowEvent *e) {
 void MainWindow::closeEvent(QCloseEvent *e) {
     e->ignore();
     hide();
+}
+
+void MainWindow::setAutoRunChecked(bool on) {
+    if (!m_actAutoRun) return;
+    QSignalBlocker blocker(m_actAutoRun);
+    m_actAutoRun->setChecked(on);
 }
 
 void MainWindow::showWindow() {
@@ -671,12 +705,18 @@ void MainWindow::retranslateUi() {
     setWindowTitle(L("Strata 本地大模型", "Strata Local LLM"));
     m_svcTitle->setText(L("服务状态", "Service Status"));
     m_verTitle->setText(L("版本与更新", "Version & Update"));
-    // 按钮显示的是「点击后要切换到的目标语言」，与托盘菜单文案保持一致
-    m_btnLang->setText(I18n::zh() ? QString::fromUtf8("🌐 English")
-                                  : QString::fromUtf8("🌐 中文"));
-    m_btnLang->setToolTip(I18n::zh()
-        ? QString::fromUtf8("切换到英文界面 / Switch to English")
-        : QString::fromUtf8("切换到中文界面 / Switch to Chinese"));
+    // 右上角设置按钮及其菜单：语言项显示「点击后要切换到的目标语言」
+    m_btnSettings->setToolTip(L("设置与更多选项", "Settings & More"));
+    m_actLang->setText(I18n::zh() ? QString::fromUtf8("🌐 切换到 English")
+                                  : QString::fromUtf8("🌐 Switch to Chinese"));
+    m_actAutoRun->setText(I18n::zh() ? QString::fromUtf8("🚀 开机自启动")
+                                     : QString::fromUtf8("🚀 Run at Startup"));
+    {
+        QSignalBlocker blocker(m_actAutoRun);   // 仅同步显示，不触发注册表写入
+        m_actAutoRun->setChecked(Config::autoRunEnabled());
+    }
+    m_actOpenDir->setText(I18n::zh() ? QString::fromUtf8("📁 打开 Strata 根目录")
+                                     : QString::fromUtf8("📁 Open Strata Folder"));
     m_urlCap->setText(L("地址", "URL"));
     m_vramCap->setText(L("显存", "VRAM"));
     m_btnCopyBase->setText(L("复制 Base", "Copy Base"));

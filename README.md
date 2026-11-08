@@ -64,7 +64,8 @@ src/
 - **一键复制 OpenAI 兼容接口** `/v1`（或 Base URL），带「已复制 ✓」绿色反馈。
 - **显存与日志实时流**：微型显存条、最后 200 行日志（只读末尾 64 KB，日志再大也不卡）、错误/警告着色、自动滚动、清空视图、打开日志文件。
 - **版本对比与一键热更新**：本地 / 线上版本号、官方发布要点、落后提交数、5 步进度与耗时，完成后自动复核版本。
-- **中英双语**：默认跟随系统语言；主窗口右上角「🌐 English / 🌐 中文」按钮或托盘菜单「切换到 English / 切换到中文」一键切换，两处状态联动，无需重启。
+- **中英双语**：默认跟随系统语言；主窗口右上角「⚙ 设置」菜单或托盘菜单一键切换，全界面即时热重载，两处状态联动，无需重启。
+- **设置菜单**：语言切换、开机自启动开关、打开 Strata 根目录，收在右上角弹出菜单里，双卡片保持平齐对称。
 - **单实例**：重复启动只会把已有窗口置顶；**开机自启动**可在托盘菜单勾选。
 - `F5` 刷新、`Esc` 缩回托盘。
 
@@ -139,7 +140,8 @@ StrataTray is an independent desktop shell for Strata, written in modern C++17 /
 - One-click copy of the OpenAI-compatible `/v1` endpoint (or Base URL) with "Copied ✓" feedback.
 - Live VRAM bar and last-200-lines log viewer (trailing 64 KB only, error/warning highlighting, auto-scroll, clear view, open log file).
 - Local vs. upstream version comparison, release highlights, commits behind, 5-step update progress, automatic version re-check.
-- **Bilingual UI (中文 / English)**: follows the system locale by default; switch instantly via the **🌐 English / 🌐 中文** button in the window's top-right corner or the tray menu, both stay in sync, no restart.
+- **Bilingual UI (中文 / English)**: follows the system locale by default; switch instantly from the **⚙ Settings** menu in the top-right corner or the tray menu, hot-reloads the whole UI with no restart.
+- **Settings menu**: language switch, run-at-startup toggle and "Open Strata Folder" live in one compact popup, keeping both cards symmetric.
 - Single instance (second launch raises the existing window) and optional run-at-startup.
 - `F5` refresh, `Esc` hide to tray.
 

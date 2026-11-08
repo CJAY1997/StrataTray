@@ -13,6 +13,8 @@ class QTextEdit;
 class QTimer;
 class QShowEvent;
 class QCloseEvent;
+class QMenu;
+class QAction;
 
 // 主窗口：双平级卡片 + 分段 Tab，只负责展示与发出意图信号
 class MainWindow : public QWidget {
@@ -29,6 +31,8 @@ public:
     void setVersionError(const QString &message);
     void refreshLog();
     void showWindow();
+    // 供托盘菜单同步勾选状态（阻塞信号，避免反向触发注册表写入）
+    void setAutoRunChecked(bool on);
 
 public slots:
     void retranslateUi();
@@ -40,6 +44,7 @@ signals:
     void checkRequested();
     void updateRequested();
     void refreshRequested();
+    void autoRunChanged(bool on);   // 设置菜单里改动开机自启时通知托盘菜单
 
 protected:
     void showEvent(QShowEvent *e) override;
@@ -68,7 +73,9 @@ private:
     QPushButton *m_btnLog = nullptr, *m_btnOpenLog = nullptr, *m_btnClearLog = nullptr;
     QPushButton *m_btnCopyBase = nullptr, *m_btnCopyApi = nullptr;
     QPushButton *m_btnCheck = nullptr, *m_btnRelease = nullptr, *m_btnUpdate = nullptr;
-    QPushButton *m_btnLang = nullptr;   // 右上角语言切换按钮
+    QPushButton *m_btnSettings = nullptr;          // 顶层右上角「设置 / 更多」
+    QMenu *m_settingsMenu = nullptr;
+    QAction *m_actLang = nullptr, *m_actAutoRun = nullptr, *m_actOpenDir = nullptr;
     QCheckBox *m_logAutoScroll = nullptr;
     QProgressBar *m_vramBar = nullptr, *m_progressBar = nullptr;
     QTabWidget *m_tabs = nullptr;

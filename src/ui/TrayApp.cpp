@@ -7,6 +7,7 @@
 #include <QtCore/QJsonDocument>
 #include <QtCore/QJsonObject>
 #include <QtCore/QProcess>
+#include <QtCore/QSignalBlocker>
 #include <QtCore/QTimer>
 #include <QtCore/QUrl>
 #include <QtGui/QAction>
@@ -69,7 +70,10 @@ TrayApp::TrayApp(QObject *parent) : QObject(parent) {
     connect(m_actOpen, &QAction::triggered, this, [this] { doOpen(); });
     connect(m_actCheck, &QAction::triggered, this, [this] { checkVersion(); });
     connect(m_actUpdate, &QAction::triggered, this, [this] { doUpdate(); });
-    connect(m_actAutoRun, &QAction::toggled, this, [](bool on) { Config::setAutoRun(on); });
+    connect(m_actAutoRun, &QAction::toggled, this, [this](bool on) {
+        Config::setAutoRun(on);
+        m_win->setAutoRunChecked(on);   // 同步主窗口设置菜单的勾选状态
+    });
     connect(m_actLanguage, &QAction::triggered, this, [] { I18n::instance().toggle(); });
     connect(m_actQuit, &QAction::triggered, qApp, &QCoreApplication::quit);
 
@@ -81,6 +85,11 @@ TrayApp::TrayApp(QObject *parent) : QObject(parent) {
     connect(m_win, &MainWindow::refreshRequested, this, [this] {
         m_local = Probe::probeLocal();
         refreshHealth();
+    });
+    // 设置菜单里改动开机自启时，反向同步托盘菜单（阻塞信号避免循环写注册表）
+    connect(m_win, &MainWindow::autoRunChanged, this, [this](bool on) {
+        QSignalBlocker blocker(m_actAutoRun);
+        m_actAutoRun->setChecked(on);
     });
 
     m_tray->setContextMenu(m_menu);
