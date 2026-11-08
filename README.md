@@ -49,7 +49,8 @@ src/
 │   ├── ProcessProbe.h/.cpp     # Win32 原生进程/端口/显存探活、日志尾部读取
 │   └── UpdateService.h/.cpp    # 版本拉取、JSON 解析、5 步更新、日志收集
 └── ui/
-    ├── I18n.h/.cpp             # 轻量中英语言管理（默认跟随系统 locale）
+    ├── I18n.h/.cpp             # 表驱动多语言框架（枚举 + 注册表 + 通用查询接口）
+    ├── LanguageMenu.h          # 可复用的「界面语言」二级子菜单构建器
     ├── Theme.h                 # QSS 主题与高 DPI 图标
     ├── MainWindow.h/.cpp       # 双卡片布局、Tab、状态刷新、按钮信号
     └── TrayApp.h/.cpp          # 托盘、菜单、IPC 单实例、Core/UI 调度
@@ -64,8 +65,8 @@ src/
 - **一键复制 OpenAI 兼容接口** `/v1`（或 Base URL），带「已复制 ✓」绿色反馈。
 - **显存与日志实时流**：微型显存条、最后 200 行日志（只读末尾 64 KB，日志再大也不卡）、错误/警告着色、自动滚动、清空视图、打开日志文件。
 - **版本对比与一键热更新**：本地 / 线上版本号、官方发布要点、落后提交数、5 步进度与耗时，完成后自动复核版本。
-- **中英双语**：默认跟随系统语言；主窗口右上角「⚙ 设置」菜单或托盘菜单一键切换，全界面即时热重载，两处状态联动，无需重启。
-- **设置菜单**：语言切换、开机自启动开关、打开 Strata 根目录，收在右上角弹出菜单里，双卡片保持平齐对称。
+- **中英双语（可扩展多语种）**：默认跟随系统语言；齿轮设置菜单与托盘菜单均提供「🌐 界面语言」二级子菜单，`QActionGroup` 互斥单选、当前语言带勾选，点击即时热重载。新增语种只需在 `I18n.h` 枚举与 `I18n.cpp` 注册表各加一行，两处菜单自动扩展。
+- **设置菜单**：语言子菜单、开机自启动开关、打开 Strata 根目录，收在右上角 ⚙ 弹出菜单里，双卡片保持平齐对称。
 - **单实例**：重复启动只会把已有窗口置顶；**开机自启动**可在托盘菜单勾选。
 - `F5` 刷新、`Esc` 缩回托盘。
 
@@ -140,8 +141,8 @@ StrataTray is an independent desktop shell for Strata, written in modern C++17 /
 - One-click copy of the OpenAI-compatible `/v1` endpoint (or Base URL) with "Copied ✓" feedback.
 - Live VRAM bar and last-200-lines log viewer (trailing 64 KB only, error/warning highlighting, auto-scroll, clear view, open log file).
 - Local vs. upstream version comparison, release highlights, commits behind, 5-step update progress, automatic version re-check.
-- **Bilingual UI (中文 / English)**: follows the system locale by default; switch instantly from the **⚙ Settings** menu in the top-right corner or the tray menu, hot-reloads the whole UI with no restart.
-- **Settings menu**: language switch, run-at-startup toggle and "Open Strata Folder" live in one compact popup, keeping both cards symmetric.
+- **Bilingual UI, ready for more languages**: follows the system locale by default; both the ⚙ Settings menu and the tray menu expose a **🌐 Language** submenu with an exclusive `QActionGroup` (current language checked) and instant hot-reload. Adding a language takes one enum value in `I18n.h` plus one row in the `I18n.cpp` registry — both submenus pick it up automatically.
+- **Settings menu**: language submenu, run-at-startup toggle and "Open Strata Folder" live in one compact popup in the top-right corner, keeping both cards symmetric.
 - Single instance (second launch raises the existing window) and optional run-at-startup.
 - `F5` refresh, `Esc` hide to tray.
 

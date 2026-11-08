@@ -1,5 +1,6 @@
 #include "TrayApp.h"
 #include "I18n.h"
+#include "LanguageMenu.h"
 #include "MainWindow.h"
 #include "Theme.h"
 #include "core/Config.h"
@@ -61,7 +62,8 @@ TrayApp::TrayApp(QObject *parent) : QObject(parent) {
     m_actAutoRun = m_menu->addAction(QString());
     m_actAutoRun->setCheckable(true);
     m_actAutoRun->setChecked(Config::autoRunEnabled());
-    m_actLanguage = m_menu->addAction(QString());
+    // 「界面语言」二级子菜单：与齿轮菜单共用同一份表驱动构建逻辑
+    m_langMenu = LanguageMenu::create(m_menu, this);
     m_actQuit = m_menu->addAction(QString());
 
     connect(m_actShow, &QAction::triggered, this, [this] { showWindow(); });
@@ -74,7 +76,6 @@ TrayApp::TrayApp(QObject *parent) : QObject(parent) {
         Config::setAutoRun(on);
         m_win->setAutoRunChecked(on);   // 同步主窗口设置菜单的勾选状态
     });
-    connect(m_actLanguage, &QAction::triggered, this, [] { I18n::instance().toggle(); });
     connect(m_actQuit, &QAction::triggered, qApp, &QCoreApplication::quit);
 
     connect(m_win, &MainWindow::startRequested, this, [this] { doStart(); });
@@ -311,9 +312,7 @@ void TrayApp::retranslateUi() {
     m_actUpdate->setText(m_updateBusy ? s("更新中…", "Updating…")
                                       : s("更新到官方新版", "Update to Latest"));
     m_actAutoRun->setText(s("开机自启动", "Run at Startup"));
-    m_actLanguage->setText(I18n::zh()
-        ? QStringLiteral("切换到 English / Switch to English")
-        : QStringLiteral("切换到中文 / Switch to Chinese"));
+    LanguageMenu::retranslate(m_langMenu);
     m_actQuit->setText(s("退出", "Quit"));
     m_tray->setToolTip(stateText(m_cur.state));
     if (m_hasVersion) {

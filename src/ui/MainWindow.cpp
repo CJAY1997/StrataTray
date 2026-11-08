@@ -1,5 +1,6 @@
 #include "MainWindow.h"
 #include "I18n.h"
+#include "LanguageMenu.h"
 #include "Theme.h"
 #include "core/Config.h"
 
@@ -98,8 +99,8 @@ void MainWindow::buildUi() {
 
     // 弹出菜单（沿用全局深色 QMenu 样式）；按钮本体在右卡片标题栏中创建
     m_settingsMenu = new QMenu(this);
-    m_actLang = m_settingsMenu->addAction(QString());
-    connect(m_actLang, &QAction::triggered, this, [] { I18n::instance().toggle(); });
+    // 「界面语言」二级子菜单：QActionGroup 互斥单选，语种由 I18n 注册表驱动
+    m_langMenu = LanguageMenu::create(m_settingsMenu, this);
 
     m_settingsMenu->addSeparator();
     m_actAutoRun = m_settingsMenu->addAction(QString());
@@ -717,10 +718,9 @@ void MainWindow::retranslateUi() {
     setWindowTitle(L("Strata 本地大模型", "Strata Local LLM"));
     m_svcTitle->setText(L("服务状态", "Service Status"));
     m_verTitle->setText(L("版本与更新", "Version & Update"));
-    // 右上角设置按钮及其菜单：语言项显示「点击后要切换到的目标语言」
+    // 右上角设置按钮及其菜单：语言子菜单标题与勾选状态跟随当前语种
     m_btnSettings->setToolTip(L("设置与更多选项", "Settings & More"));
-    m_actLang->setText(I18n::zh() ? QString::fromUtf8("🌐 切换到 English")
-                                  : QString::fromUtf8("🌐 Switch to Chinese"));
+    LanguageMenu::retranslate(m_langMenu);
     m_actAutoRun->setText(I18n::zh() ? QString::fromUtf8("🚀 开机自启动")
                                      : QString::fromUtf8("🚀 Run at Startup"));
     {

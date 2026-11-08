@@ -74,8 +74,8 @@ private:
     QPushButton *m_btnCopyBase = nullptr, *m_btnCopyApi = nullptr;
     QPushButton *m_btnCheck = nullptr, *m_btnRelease = nullptr, *m_btnUpdate = nullptr;
     QPushButton *m_btnSettings = nullptr;          // 顶层右上角「设置 / 更多」
-    QMenu *m_settingsMenu = nullptr;
-    QAction *m_actLang = nullptr, *m_actAutoRun = nullptr, *m_actOpenDir = nullptr;
+    QMenu *m_settingsMenu = nullptr, *m_langMenu = nullptr;
+    QAction *m_actAutoRun = nullptr, *m_actOpenDir = nullptr;
     QCheckBox *m_logAutoScroll = nullptr;
     QProgressBar *m_vramBar = nullptr, *m_progressBar = nullptr;
     QTabWidget *m_tabs = nullptr;
