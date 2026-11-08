@@ -61,6 +61,16 @@ if(I18N_JSON)
         COMMENT "Deploying i18n language packs")
 endif()
 
+# ---- 外观主题：社区新增 resources/themes/*.qss 后自动部署，无需改 C++ ----
+add_custom_command(TARGET StrataTray POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_SOURCE_DIR}/release/themes")
+file(GLOB THEME_QSS CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/resources/themes/*.qss")
+if(THEME_QSS)
+    add_custom_command(TARGET StrataTray POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${THEME_QSS} "${CMAKE_SOURCE_DIR}/release/themes/"
+        COMMENT "Deploying external themes")
+endif()
+
 # 输出目录固定为 release/，windeployqt 与桌面快捷方式都指向这里
 set_target_properties(StrataTray PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/release"

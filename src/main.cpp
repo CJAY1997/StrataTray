@@ -5,7 +5,7 @@
 #include <QtWidgets/QSystemTrayIcon>
 #include "core/Config.h"
 #include "ui/I18n.h"
-#include "ui/Theme.h"
+#include "ui/ThemeManager.h"
 #include "ui/TrayApp.h"
 
 int main(int argc, char **argv) {
@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
 #endif
     QApplication app(argc, argv);
     Config::instance().initialize();
-    app.setStyleSheet(QString::fromUtf8(Theme::qss()));
+    ThemeManager::instance().applySaved();   // 读取 QSettings，默认暗色，并应用全局 QSS
     QApplication::setQuitOnLastWindowClosed(false);
     app.setApplicationName(QStringLiteral("StrataTray"));
 

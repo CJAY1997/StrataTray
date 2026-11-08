@@ -1,6 +1,8 @@
 #include "MainWindow.h"
 #include "I18n.h"
 #include "LanguageMenu.h"
+#include "ThemeMenu.h"
+#include "ThemeManager.h"
 #include "Theme.h"
 #include "core/Config.h"
 
@@ -48,6 +50,44 @@
 
 static inline QString L(const char *key) { return I18n::t(key); }
 
+// 调色板占位符渲染：@{token} -> 当前主题颜色（单次替换，不会链式覆盖）
+static QString th(const QString &tpl) {
+    const auto &p = ThemeManager::instance().palette();
+    QString s = tpl;
+    s.replace(QStringLiteral("@{surface}"), p.surface);
+    s.replace(QStringLiteral("@{surface2}"), p.surface2);
+    s.replace(QStringLiteral("@{border}"), p.border);
+    s.replace(QStringLiteral("@{borderLight}"), p.borderLight);
+    s.replace(QStringLiteral("@{text}"), p.text);
+    s.replace(QStringLiteral("@{textStrong}"), p.textStrong);
+    s.replace(QStringLiteral("@{muted}"), p.muted);
+    s.replace(QStringLiteral("@{caption}"), p.caption);
+    s.replace(QStringLiteral("@{codeBg}"), p.codeBg);
+    s.replace(QStringLiteral("@{codeText}"), p.codeText);
+    s.replace(QStringLiteral("@{okFg}"), p.okFg);
+    s.replace(QStringLiteral("@{okBg}"), p.okBg);
+    s.replace(QStringLiteral("@{okBorder}"), p.okBorder);
+    s.replace(QStringLiteral("@{warnFg}"), p.warnFg);
+    s.replace(QStringLiteral("@{warnBg}"), p.warnBg);
+    s.replace(QStringLiteral("@{warnBorder}"), p.warnBorder);
+    s.replace(QStringLiteral("@{errFg}"), p.errFg);
+    s.replace(QStringLiteral("@{errBg}"), p.errBg);
+    s.replace(QStringLiteral("@{errBorder}"), p.errBorder);
+    s.replace(QStringLiteral("@{neutralFg}"), p.neutralFg);
+    s.replace(QStringLiteral("@{neutralBg}"), p.neutralBg);
+    s.replace(QStringLiteral("@{neutralBorder}"), p.neutralBorder);
+    s.replace(QStringLiteral("@{dotOk}"), p.dotOk);
+    s.replace(QStringLiteral("@{dotWarn}"), p.dotWarn);
+    s.replace(QStringLiteral("@{dotErr}"), p.dotErr);
+    s.replace(QStringLiteral("@{dotNeutral}"), p.dotNeutral);
+    s.replace(QStringLiteral("@{hlBlue}"), p.hlBlue);
+    s.replace(QStringLiteral("@{hlPurple}"), p.hlPurple);
+    s.replace(QStringLiteral("@{dangerActiveBg}"), p.dangerActiveBg);
+    s.replace(QStringLiteral("@{dangerActiveBorder}"), p.dangerActiveBorder);
+    s.replace(QStringLiteral("@{onAccentText}"), p.onAccentText);
+    return s;
+}
+
 MainWindow::MainWindow(QWidget *parent) : QWidget(parent) {
     setObjectName(QStringLiteral("rootWindow"));
     setWindowIcon(Theme::appIcon(State::Stopped));
@@ -56,9 +96,11 @@ MainWindow::MainWindow(QWidget *parent) : QWidget(parent) {
     buildUi();
     retranslateUi();
     refreshLog();
-    applyDarkTitleBar();
+    applyTitleBarTheme();
 
     connect(&I18n::instance(), &I18n::languageChanged, this, &MainWindow::retranslateUi);
+    connect(&ThemeManager::instance(), &ThemeManager::themeChanged,
+            this, &MainWindow::refreshTheme);
     connect(m_btnStart, &QPushButton::clicked, this, &MainWindow::startRequested);
     connect(m_btnStop, &QPushButton::clicked, this, &MainWindow::stopRequested);
     connect(m_btnOpen, &QPushButton::clicked, this, &MainWindow::openRequested);
@@ -97,8 +139,9 @@ void MainWindow::buildUi() {
 
     // 弹出菜单（沿用全局深色 QMenu 样式）；按钮本体在右卡片标题栏中创建
     m_settingsMenu = new QMenu(this);
-    // 「界面语言」二级子菜单：QActionGroup 互斥单选，语种由 I18n 注册表驱动
+    // 「界面语言」与「外观主题」两个二级子菜单，均由各自的注册表驱动
     m_langMenu = LanguageMenu::create(m_settingsMenu, this);
+    m_themeMenu = ThemeMenu::create(m_settingsMenu, this);
 
     m_settingsMenu->addSeparator();
     m_actAutoRun = m_settingsMenu->addAction(QString());
@@ -207,21 +250,7 @@ void MainWindow::buildUi() {
     m_btnSettings->setObjectName(QStringLiteral("btnSettings"));
     m_btnSettings->setFixedSize(24, 22);
     m_btnSettings->setCursor(QCursor(Qt::PointingHandCursor));
-    m_btnSettings->setStyleSheet(
-        "QPushButton#btnSettings {"
-        "  background: transparent;"
-        "  border: 1px solid transparent;"
-        "  border-radius: 4px;"
-        "  color: #a1a1aa;"
-        "  font-size: 11pt;"
-        "  padding: 0px;"
-        "}"
-        "QPushButton#btnSettings:hover {"
-        "  background: #2b2b31;"
-        "  border-color: #3a3a42;"
-        "  color: #fafafa;"
-        "}"
-    );
+    applySettingsButtonStyle();   // 颜色随主题变化，切换时由 refreshTheme() 重新应用
 
     verTitleRow->addWidget(m_verTitle);
     verTitleRow->addStretch(1);
@@ -348,19 +377,41 @@ void MainWindow::buildUi() {
     connect(m_progressTimer, &QTimer::timeout, this, &MainWindow::refreshProgressLabel);
 }
 
-void MainWindow::applyDarkTitleBar() {
+// 齿轮按钮的内联样式随主题刷新（透明底、悬停微亮，且不受全局 padding 挤压）
+void MainWindow::applySettingsButtonStyle() {
+    const auto &p = ThemeManager::instance().palette();
+    m_btnSettings->setStyleSheet(QStringLiteral(
+        "QPushButton#btnSettings{background:transparent;border:1px solid transparent;"
+        "border-radius:4px;color:%1;font-size:11pt;padding:0px;}"
+        "QPushButton#btnSettings:hover{background:%2;border-color:%3;color:%4;}")
+        .arg(p.muted).arg(p.surface2).arg(p.border).arg(p.textStrong));
+}
+
+// 主题切换：DWM 标题栏、按钮内联样式、所有徽章 / 富文本 / 日志着色一起热重载
+void MainWindow::refreshTheme() {
+    applySettingsButtonStyle();
+    applyTitleBarTheme();
+    retranslateUi();
+    refreshLog();
+    update();
+}
+
+void MainWindow::applyTitleBarTheme() {
 #ifdef Q_OS_WIN
     HWND hwnd = reinterpret_cast<HWND>(winId());
-    BOOL darkMode = TRUE;
-    DwmSetWindowAttribute(hwnd, 20, &darkMode, sizeof(darkMode));
-    int corner = 2;
+    // 亮色主题必须显式关闭沉浸式暗色，否则系统标题栏仍是黑底
+    BOOL darkMode = ThemeManager::instance().isDark() ? TRUE : FALSE;
+    DwmSetWindowAttribute(hwnd, 20 /* DWMWA_USE_IMMERSIVE_DARK_MODE */,
+                          &darkMode, sizeof(darkMode));
+    int corner = 2;   // DWMWCP_ROUND (Win11)
     DwmSetWindowAttribute(hwnd, 33, &corner, sizeof(corner));
+    RedrawWindow(hwnd, nullptr, nullptr, RDW_FRAME | RDW_INVALIDATE | RDW_UPDATENOW);
 #endif
 }
 
 void MainWindow::showEvent(QShowEvent *e) {
     QWidget::showEvent(e);
-    applyDarkTitleBar();
+    applyTitleBarTheme();
 }
 
 void MainWindow::closeEvent(QCloseEvent *e) {
@@ -388,8 +439,7 @@ void MainWindow::showWindow() {
 void MainWindow::copyUrl(const QString &text, QPushButton *btn, const QString &label) {
     QGuiApplication::clipboard()->setText(text);
     btn->setText(L("copied"));
-    btn->setStyleSheet(QStringLiteral(
-        "QPushButton#btnMini{background:#143024;color:#4ade80;border-color:#1d5b3b;}"));
+    btn->setStyleSheet(th(QStringLiteral("QPushButton#btnMini{background:@{okBg};color:@{okFg};border-color:@{okBorder};}")));
     QTimer::singleShot(1500, this, [this, btn, label] {
         btn->setText(label);
         btn->setStyleSheet(QString());
@@ -406,11 +456,11 @@ void MainWindow::refreshLog() {
         if (line.contains(QStringLiteral("[ERROR]"), Qt::CaseInsensitive)
             || line.contains(QStringLiteral("error"), Qt::CaseInsensitive)
             || line.contains(QStringLiteral("失败"))) {
-            fmt.setForeground(QColor(QStringLiteral("#f87171")));
+            fmt.setForeground(QColor(th(QStringLiteral("@{errFg}"))));
         } else if (line.contains(QStringLiteral("warn"), Qt::CaseInsensitive)) {
-            fmt.setForeground(QColor(QStringLiteral("#fbbf24")));
+            fmt.setForeground(QColor(th(QStringLiteral("@{warnFg}"))));
         } else {
-            fmt.setForeground(QColor(QStringLiteral("#d4d4d8")));
+            fmt.setForeground(QColor(th(QStringLiteral("@{codeText}"))));
         }
         cur.setCharFormat(fmt);
         cur.insertText(line + QStringLiteral("\n"));
@@ -427,23 +477,18 @@ void MainWindow::setVersion(const VersionInfo &v) {
 
     setVersionBadge(v.hasUpdate ? L("update_available")
                                 : L("up_to_date"),
-                    v.hasUpdate ? QStringLiteral("#fbbf24") : QStringLiteral("#4ade80"),
-                    v.hasUpdate ? QStringLiteral("#3a2a12") : QStringLiteral("#143024"),
-                    v.hasUpdate ? QStringLiteral("#78500f") : QStringLiteral("#1d5b3b"));
+                    v.hasUpdate ? th(QStringLiteral("@{warnFg}")) : th(QStringLiteral("@{okFg}")),
+                    v.hasUpdate ? th(QStringLiteral("@{warnBg}")) : th(QStringLiteral("@{okBg}")),
+                    v.hasUpdate ? th(QStringLiteral("@{warnBorder}")) : th(QStringLiteral("@{okBorder}")));
     m_versionBadge->setToolTip(v.remoteName);
 
     const QString gap = v.behind > 0
         ? L("n_commits_behind").arg(v.behind)
         : L("none");
-    m_localInfo->setText(QStringLiteral(
-        "<div style='line-height:1.6'><span style='color:#71717a'>%1</span>&nbsp;&nbsp;"
-        "<b style='color:#e4e4e7'>%2</b><br><span style='color:#71717a'>%3</span>&nbsp;&nbsp;%4 · %5 %6</div>")
+    m_localInfo->setText(th(QStringLiteral("<div style='line-height:1.6'><span style='color:@{caption}'>%1</span>&nbsp;&nbsp;<b style='color:@{text}'>%2</b><br><span style='color:@{caption}'>%3</span>&nbsp;&nbsp;%4 · %5 %6</div>"))
         .arg(L("local"), v.localDesc.toHtmlEscaped(), L("engine"),
              v.engine, L("commit"), v.localTag.toHtmlEscaped()));
-    m_remoteInfo->setText(QStringLiteral(
-        "<div style='line-height:1.6'><span style='color:#71717a'>%1</span>&nbsp;&nbsp;"
-        "<b style='color:#e4e4e7'>%2</b><br><span style='color:#71717a'>%3</span>&nbsp;&nbsp;%4 · %5 %6<br>"
-        "<span style='color:#71717a'>%7</span>&nbsp;&nbsp;%8</div>")
+    m_remoteInfo->setText(th(QStringLiteral("<div style='line-height:1.6'><span style='color:@{caption}'>%1</span>&nbsp;&nbsp;<b style='color:@{text}'>%2</b><br><span style='color:@{caption}'>%3</span>&nbsp;&nbsp;%4 · %5 %6<br><span style='color:@{caption}'>%7</span>&nbsp;&nbsp;%8</div>"))
         .arg(L("upstream"), v.remoteTag.toHtmlEscaped(), L("released"),
              v.published.toHtmlEscaped(), L("engine"), v.remoteEngine,
              L("gap"), gap));
@@ -451,12 +496,12 @@ void MainWindow::setVersion(const VersionInfo &v) {
     if (!m_updateMode) {
         if (v.hasUpdate) {
             m_updateState->setText(L("new_release_available_click_update_now_b"));
-            m_updateState->setStyleSheet(QStringLiteral("QLabel{color:#fbbf24;font-size:9pt;}"));
+            m_updateState->setStyleSheet(th(QStringLiteral("QLabel{color:@{warnFg};font-size:9pt;}")));
         } else {
             const QString hhmm = v.checkedAt.length() >= 16
                 ? v.checkedAt.mid(11, 5) : QStringLiteral("--:--");
             m_updateState->setText(L("up_to_date_checked_at_n").arg(hhmm));
-            m_updateState->setStyleSheet(QStringLiteral("QLabel{color:#71717a;font-size:9pt;}"));
+            m_updateState->setStyleSheet(th(QStringLiteral("QLabel{color:@{caption};font-size:9pt;}")));
         }
         m_progressBar->hide();
         m_hasResult = false;
@@ -469,33 +514,33 @@ void MainWindow::setVersion(const VersionInfo &v) {
 
 void MainWindow::renderVersionText(const VersionInfo &v) {
     if (m_updateMode) return;
-    QString html = QStringLiteral("<div style='color:#e4e4e7'>");
-    html += QStringLiteral("<h3 style='color:#7dd3fc;font-size:11pt;margin:0 0 8px 0;'>%1</h3>")
+    QString html = th(QStringLiteral("<div style='color:@{text}'>"));
+    html += th(QStringLiteral("<h3 style='color:@{hlBlue};font-size:11pt;margin:0 0 8px 0;'>%1</h3>"))
             .arg(L("release_highlights"));
     if (v.highlights.isEmpty()) {
-        html += QStringLiteral("<p style='color:#71717a;margin:0;'>%1</p>")
+        html += th(QStringLiteral("<p style='color:@{caption};margin:0;'>%1</p>"))
                 .arg(L("no_highlights_provided"));
     } else {
-        html += QStringLiteral("<ul style='margin:0 0 12px 18px;line-height:1.65;color:#d4d4d8;'>");
+        html += th(QStringLiteral("<ul style='margin:0 0 12px 18px;line-height:1.65;color:@{codeText};'>"));
         for (const QString &h : v.highlights)
             html += QStringLiteral("<li>%1</li>").arg(h.toHtmlEscaped());
         html += QStringLiteral("</ul>");
     }
-    html += QStringLiteral("<p style='color:#71717a;font-size:9pt;margin:0 0 12px 0;'>%1 %2")
+    html += th(QStringLiteral("<p style='color:@{caption};font-size:9pt;margin:0 0 12px 0;'>%1 %2"))
             .arg(L("checked_at"), v.checkedAt.toHtmlEscaped());
     if (v.behind >= 0)
         html += QStringLiteral(" · %1 %2").arg(L("commits_behind")).arg(v.behind);
     if (!v.error.isEmpty())
-        html += QStringLiteral("<br><span style='color:#fbbf24'>%1</span>").arg(v.error.toHtmlEscaped());
+        html += th(QStringLiteral("<br><span style='color:@{warnFg}'>%1</span>")).arg(v.error.toHtmlEscaped());
     html += QStringLiteral("</p>");
 
     const QStringList &list = !v.commits.isEmpty() ? v.commits : v.recent;
     if (!list.isEmpty()) {
-        html += QStringLiteral("<h3 style='color:#a78bfa;font-size:11pt;margin:4px 0 8px 0;'>%1</h3>")
+        html += th(QStringLiteral("<h3 style='color:@{hlPurple};font-size:11pt;margin:4px 0 8px 0;'>%1</h3>"))
                 .arg(!v.commits.isEmpty()
                      ? L("pending_commits_latest_10")
                      : L("recent_commits"));
-        html += QStringLiteral("<div style='font-family:Consolas,monospace;font-size:9pt;color:#a1a1aa;line-height:1.6;'>");
+        html += th(QStringLiteral("<div style='font-family:Consolas,monospace;font-size:9pt;color:@{muted};line-height:1.6;'>"));
         for (const QString &c : list) html += QStringLiteral("%1<br>").arg(c.toHtmlEscaped());
         html += QStringLiteral("</div>");
     }
@@ -511,7 +556,7 @@ void MainWindow::beginUpdate() {
     m_stageName = L("starting");
     m_btnCheck->setEnabled(false);
     refreshActionButtons();
-    m_updateState->setStyleSheet(QStringLiteral("QLabel{color:#fbbf24;font-size:9pt;font-weight:600;}"));
+    m_updateState->setStyleSheet(th(QStringLiteral("QLabel{color:@{warnFg};font-size:9pt;font-weight:600;}")));
     m_progressBar->setStyleSheet(QString());
     m_progressBar->setValue(0);
     m_progressBar->show();
@@ -561,12 +606,12 @@ void MainWindow::renderUpdateResult() {
     if (!m_hasResult) return;
     if (m_resultOk) {
         m_progressBar->setValue(5);
-        m_progressBar->setStyleSheet(QStringLiteral("QProgressBar#updateBar::chunk{background:#22c55e;}"));
+        m_progressBar->setStyleSheet(th(QStringLiteral("QProgressBar#updateBar::chunk{background:@{dotOk};}")));
         m_updateState->setText(L("update_complete_in_n_verifying").arg(elapsedText()));
-        m_updateState->setStyleSheet(QStringLiteral("QLabel{color:#4ade80;font-size:9pt;font-weight:600;}"));
+        m_updateState->setStyleSheet(th(QStringLiteral("QLabel{color:@{okFg};font-size:9pt;font-weight:600;}")));
     } else {
         m_updateState->setText(L("update_failed_exit_n_see_update_local_lo").arg(m_resultCode));
-        m_updateState->setStyleSheet(QStringLiteral("QLabel{color:#f87171;font-size:9pt;font-weight:600;}"));
+        m_updateState->setStyleSheet(th(QStringLiteral("QLabel{color:@{errFg};font-size:9pt;font-weight:600;}")));
     }
 }
 
@@ -610,8 +655,7 @@ void MainWindow::refreshActionButtons() {
     }
     m_btnStop->setEnabled(!m_serviceStopped);
     if (m_serviceReady) {
-        m_btnStop->setStyleSheet(QStringLiteral(
-            "QPushButton#btnDanger{background:#7f1d1d;border-color:#ef4444;color:#ffffff;}"));
+        m_btnStop->setStyleSheet(th(QStringLiteral("QPushButton#btnDanger{background:@{dangerActiveBg};border-color:@{dotErr};color:@{onAccentText};}")));
         m_btnStop->setToolTip(L("stop_the_service_and_free_vram"));
     } else {
         m_btnStop->setStyleSheet(QString());
@@ -637,15 +681,15 @@ void MainWindow::setVersionBadge(const QString &text, const QString &fg,
 }
 
 void MainWindow::setVersionChecking() {
-    setVersionBadge(L("checking"), QStringLiteral("#a1a1aa"),
-                    QStringLiteral("#252529"), QStringLiteral("#3a3a42"));
+    setVersionBadge(L("checking"), th(QStringLiteral("@{muted}")),
+                    th(QStringLiteral("@{neutralBg}")), th(QStringLiteral("@{border}")));
     m_btnCheck->setEnabled(false);
 }
 
 void MainWindow::setVersionError(const QString &message) {
     m_checkError = message;
-    setVersionBadge(L("check_failed"), QStringLiteral("#f87171"),
-                    QStringLiteral("#3a1a1a"), QStringLiteral("#7f2d2d"));
+    setVersionBadge(L("check_failed"), th(QStringLiteral("@{errFg}")),
+                    th(QStringLiteral("@{errBg}")), th(QStringLiteral("@{errBorder}")));
     m_versionBadge->setToolTip(message);
     m_btnCheck->setEnabled(true);
 }
@@ -656,17 +700,17 @@ void MainWindow::applySnapshot(const Snapshot &s) {
     QString text, dot, fg, bg, border;
     switch (s.state) {
     case State::Ready:
-        text = L("running_ready"); dot = QStringLiteral("#22c55e");
-        fg = QStringLiteral("#4ade80"); bg = QStringLiteral("#143024"); border = QStringLiteral("#1d5b3b"); break;
+        text = L("running_ready"); dot = th(QStringLiteral("@{dotOk}"));
+        fg = th(QStringLiteral("@{okFg}")); bg = th(QStringLiteral("@{okBg}")); border = th(QStringLiteral("@{okBorder}")); break;
     case State::Starting:
-        text = L("loading_model_2"); dot = QStringLiteral("#f59e0b");
-        fg = QStringLiteral("#fbbf24"); bg = QStringLiteral("#3a2a12"); border = QStringLiteral("#78500f"); break;
+        text = L("loading_model_2"); dot = th(QStringLiteral("@{dotWarn}"));
+        fg = th(QStringLiteral("@{warnFg}")); bg = th(QStringLiteral("@{warnBg}")); border = th(QStringLiteral("@{warnBorder}")); break;
     case State::Orphan:
-        text = L("error_no_listener"); dot = QStringLiteral("#ef4444");
-        fg = QStringLiteral("#fca5a5"); bg = QStringLiteral("#3a1a1a"); border = QStringLiteral("#7f2d2d"); break;
+        text = L("error_no_listener"); dot = th(QStringLiteral("@{dotErr}"));
+        fg = th(QStringLiteral("@{muted}")); bg = th(QStringLiteral("@{errBg}")); border = th(QStringLiteral("@{errBorder}")); break;
     case State::Stopped:
-        text = L("stopped"); dot = QStringLiteral("#71717a");
-        fg = QStringLiteral("#a1a1aa"); bg = QStringLiteral("#252529"); border = QStringLiteral("#3a3a42"); break;
+        text = L("stopped"); dot = th(QStringLiteral("@{caption}"));
+        fg = th(QStringLiteral("@{muted}")); bg = th(QStringLiteral("@{neutralBg}")); border = th(QStringLiteral("@{border}")); break;
     }
     m_stateBadge->setText(text);
     m_badgePill->setToolTip(s.state == State::Orphan
@@ -684,9 +728,7 @@ void MainWindow::applySnapshot(const Snapshot &s) {
     const QString modelText = s.hasHealth
         ? L("n_context_n_tokens").arg(s.model.toHtmlEscaped()).arg(s.maxContext)
         : L("no_listener");
-    m_info->setText(QStringLiteral(
-        "<div style='line-height:1.65'><span style='color:#71717a'>%1</span>&nbsp;&nbsp;%2<br>"
-        "<span style='color:#71717a'>%3</span>&nbsp;&nbsp;%4</div>")
+    m_info->setText(th(QStringLiteral("<div style='line-height:1.65'><span style='color:@{caption}'>%1</span>&nbsp;&nbsp;%2<br><span style='color:@{caption}'>%3</span>&nbsp;&nbsp;%4</div>"))
         .arg(L("process"), pidText, L("model"), modelText));
 
     const auto gpu = Probe::gpuMem();
@@ -715,6 +757,7 @@ void MainWindow::retranslateUi() {
     // 右上角设置按钮及其菜单：语言子菜单标题与勾选状态跟随当前语种
     m_btnSettings->setToolTip(L("settings_more"));
     LanguageMenu::retranslate(m_langMenu);
+    ThemeMenu::retranslate(m_themeMenu);
     m_actAutoRun->setText(L("menu_run_at_startup"));
     {
         QSignalBlocker blocker(m_actAutoRun);   // 仅同步显示，不触发注册表写入
@@ -745,12 +788,12 @@ void MainWindow::retranslateUi() {
         m_vramLabel->setText(QStringLiteral("—"));
     }
     if (!m_hasVersion) {
-        setVersionBadge(L("checking"), QStringLiteral("#a1a1aa"),
-                        QStringLiteral("#252529"), QStringLiteral("#3a3a42"));
+        setVersionBadge(L("checking"), th(QStringLiteral("@{muted}")),
+                        th(QStringLiteral("@{neutralBg}")), th(QStringLiteral("@{border}")));
         m_localInfo->setText(L("local_loading"));
         m_remoteInfo->setText(L("upstream_loading"));
         m_updateState->setText(L("no_update_running"));
-        m_versionView->setHtml(QStringLiteral("<p style='color:#71717a'>%1</p>")
+        m_versionView->setHtml(th(QStringLiteral("<p style='color:@{caption}'>%1</p>"))
                                .arg(L("checking_upstream_version")));
     }
     if (m_hasSnapshot) applySnapshot(m_lastSnapshot);

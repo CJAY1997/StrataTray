@@ -51,11 +51,14 @@ src/
 ├── ui/
 │   ├── I18n.h/.cpp             # JSON 键值字典多语言框架（动态发现 / 英文回退）
 │   ├── LanguageMenu.h          # 可复用的「界面语言」二级子菜单构建器
-│   ├── Theme.h                 # QSS 主题与高 DPI 图标
+│   ├── Theme.h                 # 内置 dark / light QSS 与高 DPI 图标
+│   ├── ThemeManager.h/.cpp     # 主题注册表、外部 .qss 发现、QSettings 持久化
+│   ├── ThemeMenu.h             # 可复用的「外观主题」二级子菜单构建器
 │   ├── MainWindow.h/.cpp       # 双卡片布局、Tab、状态刷新、按钮信号
 │   └── TrayApp.h/.cpp          # 托盘、菜单、IPC 单实例、Core/UI 调度
 resources/
-└── i18n/{en,zh_CN,...}.json    # 语言包：每个文件一个语种，扁平 key -> 文案
+├── i18n/{en,zh_CN,...}.json    # 语言包：每个文件一个语种，扁平 key -> 文案
+└── themes/*.qss                # 外部主题：放一个文件即自动进入菜单
 ```
 
 平台相关代码（`dwmapi.h`、`iphlpapi.h`、注册表）严格包在 `#ifdef Q_OS_WIN` 中，其它平台提供合理 Fallback。
@@ -68,7 +71,8 @@ resources/
 - **显存与日志实时流**：微型显存条、最后 200 行日志（只读末尾 64 KB，日志再大也不卡）、错误/警告着色、自动滚动、清空视图、打开日志文件。
 - **版本对比与一键热更新**：本地 / 线上版本号、官方发布要点、落后提交数、5 步进度与耗时，完成后自动复核版本。
 - **多语言（JSON 字典，开放贡献）**：所有界面文案都是 `key -> 文案` 的扁平 JSON 词条；语言包在启动时从内嵌资源与 `release/i18n/` 动态发现，缺失词条自动回退英文。齿轮设置菜单与托盘菜单均提供「🌐 界面语言」二级子菜单，`QActionGroup` 互斥单选、当前语言带勾选，点击即时热重载。**新增语种只需加一个 JSON 文件**，无需改 C++。
-- **设置菜单**：语言子菜单、开机自启动开关、打开 Strata 根目录，收在右上角 ⚙ 弹出菜单里，双卡片保持平齐对称。
+- **设置菜单**：界面语言、外观主题、开机自启动开关、打开 Strata 根目录，收在右上角 ⚙ 弹出菜单里，双卡片保持平齐对称。
+- **开放式主题系统**：内置精致暗色与清爽亮色两套，切换时全局 QSS 热重载、Windows 原生标题栏联动明暗、徽章与富文字自动换色，并用 `QSettings` 记住选择。社区只需往 `resources/themes/` 放一个 `.qss` 即可扩展新主题（见 [扩展说明](resources/themes/README.md)），菜单自动挂载。
 - **单实例**：重复启动只会把已有窗口置顶；**开机自启动**可在托盘菜单勾选。
 - `F5` 刷新、`Esc` 缩回托盘。
 
@@ -166,7 +170,8 @@ StrataTray is an independent desktop shell for Strata, written in modern C++17 /
 - Live VRAM bar and last-200-lines log viewer (trailing 64 KB only, error/warning highlighting, auto-scroll, clear view, open log file).
 - Local vs. upstream version comparison, release highlights, commits behind, 5-step update progress, automatic version re-check.
 - **Multilingual UI (JSON dictionaries, open to contributions)**: every UI string is a flat `key -> text` entry. Language packs are discovered at startup from embedded resources and `release/i18n/`; missing keys fall back to English automatically. Both the ⚙ Settings menu and the tray menu expose a **🌐 Language** submenu with an exclusive `QActionGroup` (current language checked) and instant hot-reload. **Adding a language means adding one JSON file — no C++ changes.**
-- **Settings menu**: language submenu, run-at-startup toggle and "Open Strata Folder" live in one compact popup in the top-right corner, keeping both cards symmetric.
+- **Settings menu**: language submenu, theme submenu, run-at-startup toggle and "Open Strata Folder" live in one compact popup in the top-right corner, keeping both cards symmetric.
+- **Open theme system**: a polished dark theme and a clean light theme ship built-in. Switching hot-reloads the global QSS, toggles the native Windows title bar between dark and light, re-tints badges/rich text, and persists via `QSettings`. Contributors can add a new theme by dropping a single `.qss` into `resources/themes/` (see [the guide](resources/themes/README.md)) — the submenu picks it up automatically.
 - Single instance (second launch raises the existing window) and optional run-at-startup.
 - `F5` refresh, `Esc` hide to tray.
 

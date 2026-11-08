@@ -36,6 +36,7 @@ public:
 
 public slots:
     void retranslateUi();
+    void refreshTheme();               // 主题切换后的热重载
 
 signals:
     void startRequested();
@@ -52,7 +53,8 @@ protected:
 
 private:
     void buildUi();
-    void applyDarkTitleBar();
+    void applyTitleBarTheme();
+    void applySettingsButtonStyle();
     void refreshActionButtons();
     void refreshProgressLabel();
     void setVersionBadge(const QString &text, const QString &fg,
@@ -74,7 +76,7 @@ private:
     QPushButton *m_btnCopyBase = nullptr, *m_btnCopyApi = nullptr;
     QPushButton *m_btnCheck = nullptr, *m_btnRelease = nullptr, *m_btnUpdate = nullptr;
     QPushButton *m_btnSettings = nullptr;          // 顶层右上角「设置 / 更多」
-    QMenu *m_settingsMenu = nullptr, *m_langMenu = nullptr;
+    QMenu *m_settingsMenu = nullptr, *m_langMenu = nullptr, *m_themeMenu = nullptr;
     QAction *m_actAutoRun = nullptr, *m_actOpenDir = nullptr;
     QCheckBox *m_logAutoScroll = nullptr;
     QProgressBar *m_vramBar = nullptr, *m_progressBar = nullptr;

@@ -1,6 +1,8 @@
 #include "TrayApp.h"
 #include "I18n.h"
 #include "LanguageMenu.h"
+#include "ThemeMenu.h"
+#include "ThemeManager.h"
 #include "MainWindow.h"
 #include "Theme.h"
 #include "core/Config.h"
@@ -62,8 +64,9 @@ TrayApp::TrayApp(QObject *parent) : QObject(parent) {
     m_actAutoRun = m_menu->addAction(QString());
     m_actAutoRun->setCheckable(true);
     m_actAutoRun->setChecked(Config::autoRunEnabled());
-    // 「界面语言」二级子菜单：与齿轮菜单共用同一份表驱动构建逻辑
+    // 「界面语言」与「外观主题」二级子菜单，与齿轮菜单共用构建逻辑
     m_langMenu = LanguageMenu::create(m_menu, this);
+    m_themeMenu = ThemeMenu::create(m_menu, this);
     m_actQuit = m_menu->addAction(QString());
 
     connect(m_actShow, &QAction::triggered, this, [this] { showWindow(); });
@@ -309,6 +312,7 @@ void TrayApp::retranslateUi() {
                                       : s("update_to_latest"));
     m_actAutoRun->setText(s("run_at_startup"));
     LanguageMenu::retranslate(m_langMenu);
+    ThemeMenu::retranslate(m_themeMenu);
     m_actQuit->setText(s("quit"));
     m_tray->setToolTip(stateText(m_cur.state));
     if (m_hasVersion) {
