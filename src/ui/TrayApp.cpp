@@ -24,7 +24,7 @@
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QSystemTrayIcon>
 
-static inline QString s(const char *z, const char *e) { return I18n::s(z, e); }
+static inline QString s(const char *key) { return I18n::t(key); }
 
 QString TrayApp::ipcName() { return QStringLiteral("StrataTray_SingleInstance"); }
 
@@ -42,7 +42,7 @@ bool TrayApp::notifyExistingInstance() {
 TrayApp::TrayApp(QObject *parent) : QObject(parent) {
     m_win = new MainWindow();
     m_tray = new QSystemTrayIcon(Theme::appIcon(State::Stopped), this);
-    m_tray->setToolTip(s("Strata 本地大模型", "Strata Local LLM"));
+    m_tray->setToolTip(s("app_title"));
 
     m_menu = new QMenu();
     m_actStatus = m_menu->addAction(QString());
@@ -107,8 +107,7 @@ TrayApp::TrayApp(QObject *parent) : QObject(parent) {
     connect(m_updates, &UpdateService::checkFailed, this, [this] {
         m_versionBusy = false;
         m_actCheck->setEnabled(true);
-        m_win->setVersionError(s("线上版本检查失败，可点「重新检查」重试",
-                                 "Version check failed, click Recheck to retry"));
+        m_win->setVersionError(s("version_check_failed_click_recheck_to_re"));
         loadVersionCache();
     });
     connect(m_updates, &UpdateService::versionReady, this,
@@ -119,12 +118,11 @@ TrayApp::TrayApp(QObject *parent) : QObject(parent) {
             [this](bool ok, int code) {
         m_updateBusy = false;
         m_win->finishUpdate(ok, code);
-        m_actUpdate->setText(s("更新到官方新版", "Update to Latest"));
+        m_actUpdate->setText(s("update_to_latest"));
         m_actUpdate->setEnabled(true);
-        notify(s("Strata 更新", "Strata Update"),
-               ok ? s("更新完成，正在重新核对版本号…", "Update complete, verifying version…")
-                  : s("更新未完成（退出码 %1），详见 update-local.log",
-                      "Update failed (exit %1), see update-local.log").arg(code));
+        notify(s("strata_update"),
+               ok ? s("update_complete_verifying_version")
+                  : s("update_failed_exit_n_see_update_local_lo_2").arg(code));
         m_local = Probe::probeLocal();
         refreshHealth();
         checkVersion();
@@ -204,10 +202,10 @@ void TrayApp::refreshHealth() {
 
 QString TrayApp::stateText(State st) const {
     switch (st) {
-    case State::Ready:    return s("● 运行中（就绪）", "● Running (Ready)");
-    case State::Starting: return s("● 启动中（模型加载）", "● Loading model");
-    case State::Orphan:   return s("● 异常（引擎在，服务没监听）", "● Error (no listener)");
-    case State::Stopped:  return s("○ 已停止", "○ Stopped");
+    case State::Ready:    return s("running_ready_2");
+    case State::Starting: return s("loading_model_3");
+    case State::Orphan:   return s("error_no_listener_2");
+    case State::Stopped:  return s("stopped_2");
     }
     return QString();
 }
@@ -225,8 +223,8 @@ void TrayApp::updateUi() {
     m_actCheck->setEnabled(!busy && !m_versionBusy);
     m_actUpdate->setEnabled(!busy && m_cur.state == State::Stopped);
     m_actUpdate->setToolTip(m_cur.state == State::Stopped
-        ? s("按官方流程升级（会先停止服务）", "Run the official updater")
-        : s("运行中的模型不能升级，请先点「停止服务」", "Stop the service before updating"));
+        ? s("run_the_official_updater")
+        : s("stop_the_service_before_updating"));
     m_win->applySnapshot(m_cur);
 }
 
@@ -235,7 +233,7 @@ void TrayApp::doStart() {
     connect(p, &QProcess::finished, this, [this, p](int code, QProcess::ExitStatus) {
         p->deleteLater();
         if (code == 0) notify(QStringLiteral("Strata"),
-                              s("已发起启动，正在加载模型…", "Starting, loading model…"));
+                              s("starting_loading_model"));
         m_local = Probe::probeLocal();
         refreshHealth();
     });
@@ -247,7 +245,7 @@ void TrayApp::doStop() {
     auto *p = new QProcess(this);
     connect(p, &QProcess::finished, this, [this, p](int, QProcess::ExitStatus) {
         p->deleteLater();
-        notify(QStringLiteral("Strata"), s("已停止，显存已释放", "Stopped, VRAM released"));
+        notify(QStringLiteral("Strata"), s("stopped_vram_released"));
         m_local = Probe::probeLocal();
         refreshHealth();
     });
@@ -267,16 +265,15 @@ void TrayApp::checkVersion() {
 void TrayApp::applyVersion(const VersionInfo &v, bool notifyNew) {
     m_lastVersion = v;
     m_hasVersion = true;
-    m_actVersion->setText(s("版本：%1 → %2%3", "Version: %1 → %2%3")
+    m_actVersion->setText(s("version_n_nn")
         .arg(v.localDesc, v.remoteTag,
-             v.hasUpdate ? s("（有新版）", " (update available)")
-                         : s("（已同步）", " (up to date)")));
+             v.hasUpdate ? s("update_available_2")
+                         : s("up_to_date_2")));
     m_win->setVersion(v);
     if (notifyNew && v.hasUpdate && !v.remoteTag.isEmpty()
         && v.remoteTag != m_lastRemoteTag) {
-        notify(s("Strata 有新版本", "New Strata release"),
-               s("线上 %1，本地 %2。可在托盘菜单或「更新内容」页升级。",
-                 "Upstream %1, local %2. Update from the tray menu or Release Notes tab.")
+        notify(s("new_strata_release"),
+               s("upstream_n_local_n_update_from_the_tray")
                .arg(v.remoteTag, v.localDesc));
     }
     if (!v.remoteTag.isEmpty()) m_lastRemoteTag = v.remoteTag;
@@ -290,38 +287,37 @@ void TrayApp::loadVersionCache() {
 void TrayApp::doUpdate() {
     if (m_updateBusy) return;
     if (m_cur.state != State::Stopped) {
-        notify(s("Strata 更新", "Strata Update"),
-               s("请先点「停止服务」，运行中的模型不能升级。",
-                 "Stop the service before updating."));
+        notify(s("strata_update"),
+               s("stop_the_service_before_updating_2"));
         return;
     }
     m_updateBusy = true;
     m_actUpdate->setEnabled(false);
-    m_actUpdate->setText(s("更新中…", "Updating…"));
+    m_actUpdate->setText(s("updating"));
     m_win->beginUpdate();
     m_updates->startUpdate();
 }
 
 void TrayApp::retranslateUi() {
     m_actStatus->setText(stateText(m_cur.state));
-    m_actShow->setText(s("显示主界面", "Show Window"));
-    m_actStart->setText(s("启动服务", "Start Service"));
-    m_actStop->setText(s("停止服务（释放显存）", "Stop Service (free VRAM)"));
-    m_actOpen->setText(s("打开网页", "Open WebUI"));
-    m_actCheck->setText(s("检查线上新版本", "Check for Updates"));
-    m_actUpdate->setText(m_updateBusy ? s("更新中…", "Updating…")
-                                      : s("更新到官方新版", "Update to Latest"));
-    m_actAutoRun->setText(s("开机自启动", "Run at Startup"));
+    m_actShow->setText(s("show_window"));
+    m_actStart->setText(s("start_service"));
+    m_actStop->setText(s("stop_service_free_vram"));
+    m_actOpen->setText(s("open_webui"));
+    m_actCheck->setText(s("check_for_updates"));
+    m_actUpdate->setText(m_updateBusy ? s("updating")
+                                      : s("update_to_latest"));
+    m_actAutoRun->setText(s("run_at_startup"));
     LanguageMenu::retranslate(m_langMenu);
-    m_actQuit->setText(s("退出", "Quit"));
+    m_actQuit->setText(s("quit"));
     m_tray->setToolTip(stateText(m_cur.state));
     if (m_hasVersion) {
-        m_actVersion->setText(s("版本：%1 → %2%3", "Version: %1 → %2%3")
+        m_actVersion->setText(s("version_n_nn")
             .arg(m_lastVersion.localDesc, m_lastVersion.remoteTag,
-                 m_lastVersion.hasUpdate ? s("（有新版）", " (update available)")
-                                        : s("（已同步）", " (up to date)")));
+                 m_lastVersion.hasUpdate ? s("update_available_2")
+                                        : s("up_to_date_2")));
     } else {
-        m_actVersion->setText(s("版本：检查中…", "Version: checking…"));
+        m_actVersion->setText(s("version_checking"));
     }
     updateUi();
 }

@@ -48,12 +48,14 @@ src/
 │   ├── Config.h/.cpp           # std::filesystem 路径探测、单例配置、开机自启
 │   ├── ProcessProbe.h/.cpp     # Win32 原生进程/端口/显存探活、日志尾部读取
 │   └── UpdateService.h/.cpp    # 版本拉取、JSON 解析、5 步更新、日志收集
-└── ui/
-    ├── I18n.h/.cpp             # 表驱动多语言框架（枚举 + 注册表 + 通用查询接口）
-    ├── LanguageMenu.h          # 可复用的「界面语言」二级子菜单构建器
-    ├── Theme.h                 # QSS 主题与高 DPI 图标
-    ├── MainWindow.h/.cpp       # 双卡片布局、Tab、状态刷新、按钮信号
-    └── TrayApp.h/.cpp          # 托盘、菜单、IPC 单实例、Core/UI 调度
+├── ui/
+│   ├── I18n.h/.cpp             # JSON 键值字典多语言框架（动态发现 / 英文回退）
+│   ├── LanguageMenu.h          # 可复用的「界面语言」二级子菜单构建器
+│   ├── Theme.h                 # QSS 主题与高 DPI 图标
+│   ├── MainWindow.h/.cpp       # 双卡片布局、Tab、状态刷新、按钮信号
+│   └── TrayApp.h/.cpp          # 托盘、菜单、IPC 单实例、Core/UI 调度
+resources/
+└── i18n/{en,zh_CN,...}.json    # 语言包：每个文件一个语种，扁平 key -> 文案
 ```
 
 平台相关代码（`dwmapi.h`、`iphlpapi.h`、注册表）严格包在 `#ifdef Q_OS_WIN` 中，其它平台提供合理 Fallback。
@@ -65,10 +67,32 @@ src/
 - **一键复制 OpenAI 兼容接口** `/v1`（或 Base URL），带「已复制 ✓」绿色反馈。
 - **显存与日志实时流**：微型显存条、最后 200 行日志（只读末尾 64 KB，日志再大也不卡）、错误/警告着色、自动滚动、清空视图、打开日志文件。
 - **版本对比与一键热更新**：本地 / 线上版本号、官方发布要点、落后提交数、5 步进度与耗时，完成后自动复核版本。
-- **中英双语（可扩展多语种）**：默认跟随系统语言；齿轮设置菜单与托盘菜单均提供「🌐 界面语言」二级子菜单，`QActionGroup` 互斥单选、当前语言带勾选，点击即时热重载。新增语种只需在 `I18n.h` 枚举与 `I18n.cpp` 注册表各加一行，两处菜单自动扩展。
+- **多语言（JSON 字典，开放贡献）**：所有界面文案都是 `key -> 文案` 的扁平 JSON 词条；语言包在启动时从内嵌资源与 `release/i18n/` 动态发现，缺失词条自动回退英文。齿轮设置菜单与托盘菜单均提供「🌐 界面语言」二级子菜单，`QActionGroup` 互斥单选、当前语言带勾选，点击即时热重载。**新增语种只需加一个 JSON 文件**，无需改 C++。
 - **设置菜单**：语言子菜单、开机自启动开关、打开 Strata 根目录，收在右上角 ⚙ 弹出菜单里，双卡片保持平齐对称。
 - **单实例**：重复启动只会把已有窗口置顶；**开机自启动**可在托盘菜单勾选。
 - `F5` 刷新、`Esc` 缩回托盘。
+
+### 贡献新语言指南 (Contributing Translations)
+
+想让 StrataTray 说你的语言？**不需要安装编译器、不需要懂 C++**，三步即可：
+
+1. **Fork 本项目**：在 GitHub 上点 Fork，clone 到本地（也可以直接在网页上编辑）。
+2. **复制模板**：把 `resources/i18n/en.json` 复制一份，重命名为目标语言，例如 `ja_JP.json`、`ko_KR.json`、`fr_FR.json`。文件名去掉 `.json` 就是语言 id。
+3. **翻译并提交 PR**：只改 JSON 里的**值**，不要动键名；把 `_meta.name` 改成该语言的自称（如 `日本語`），其余逐条翻译，提交 PR 即可被合并进官方版本！
+
+```json
+{
+  "_meta": { "name": "日本語", "locale": "ja_JP" },
+  "app_title": "Strata ローカル LLM",
+  "start_service": "サービスを開始",
+  "stop_service": "サービスを停止",
+  "service_status": "サービスの状態"
+}
+```
+
+> 只翻译一部分也没关系：未提供的词条会**自动回退到 `en.json`**，界面不会出现空白或 key。
+> 想立刻预览：把 JSON 放进 `release/i18n/` 再重启程序，子菜单里就会多出该语言（每次构建时 CMake 也会自动把 `resources/i18n/*.json` 复制过去）。
+> 请勿改动 `en.json` 的键名；如果确实需要新增界面文案，请在 PR 里一并说明对应的 C++ 调用点。
 
 ### 环境要求与构建
 
@@ -107,7 +131,7 @@ set STRATA_PATH=D:\MyStrata
 
 ### 开源协议
 
-发布前请补充 `LICENSE`（推荐 MIT）与 `CONTRIBUTING.md`。
+本项目采用 [MIT](LICENSE) 协议，欢迎通过 PR 贡献新的语言包与功能改进。
 
 ---
 
@@ -141,10 +165,32 @@ StrataTray is an independent desktop shell for Strata, written in modern C++17 /
 - One-click copy of the OpenAI-compatible `/v1` endpoint (or Base URL) with "Copied ✓" feedback.
 - Live VRAM bar and last-200-lines log viewer (trailing 64 KB only, error/warning highlighting, auto-scroll, clear view, open log file).
 - Local vs. upstream version comparison, release highlights, commits behind, 5-step update progress, automatic version re-check.
-- **Bilingual UI, ready for more languages**: follows the system locale by default; both the ⚙ Settings menu and the tray menu expose a **🌐 Language** submenu with an exclusive `QActionGroup` (current language checked) and instant hot-reload. Adding a language takes one enum value in `I18n.h` plus one row in the `I18n.cpp` registry — both submenus pick it up automatically.
+- **Multilingual UI (JSON dictionaries, open to contributions)**: every UI string is a flat `key -> text` entry. Language packs are discovered at startup from embedded resources and `release/i18n/`; missing keys fall back to English automatically. Both the ⚙ Settings menu and the tray menu expose a **🌐 Language** submenu with an exclusive `QActionGroup` (current language checked) and instant hot-reload. **Adding a language means adding one JSON file — no C++ changes.**
 - **Settings menu**: language submenu, run-at-startup toggle and "Open Strata Folder" live in one compact popup in the top-right corner, keeping both cards symmetric.
 - Single instance (second launch raises the existing window) and optional run-at-startup.
 - `F5` refresh, `Esc` hide to tray.
+
+### Contributing Translations
+
+Want StrataTray to speak your language? **No compiler, no C++ knowledge required** — three steps:
+
+1. **Fork this repository**: click Fork on GitHub, then clone it locally (or edit directly in the browser).
+2. **Copy the template**: duplicate `resources/i18n/en.json` and rename it for your locale, e.g. `ja_JP.json`, `ko_KR.json`, `fr_FR.json`. The filename without `.json` becomes the language id.
+3. **Translate & open a PR**: change only the JSON **values**, never the keys; set `_meta.name` to the language's native name (e.g. `日本語`) and translate the remaining entries. Commit and open a PR — that's it, your translation can ship in the official build!
+
+```json
+{
+  "_meta": { "name": "日本語", "locale": "ja_JP" },
+  "app_title": "Strata ローカル LLM",
+  "start_service": "サービスを開始",
+  "stop_service": "サービスを停止",
+  "service_status": "サービスの状態"
+}
+```
+
+> Partial translations are perfectly fine: any missing key **falls back to `en.json`** automatically, so the UI never shows blanks or raw keys.
+> To preview instantly, drop the JSON into `release/i18n/` and restart the app — the language appears in the submenu. CMake also copies `resources/i18n/*.json` there on every build.
+> Please don't rename keys in `en.json`; if a genuinely new UI string is needed, mention the corresponding C++ call site in your PR.
 
 ### Prerequisites & Build
 
@@ -164,7 +210,7 @@ If Qt is not detected: `set QT_DIR=C:\Qt\6.8.0\msvc2022_64` then `build.bat`.
 
 ### License
 
-Add a `LICENSE` (MIT recommended) before publishing.
+Released under the [MIT License](LICENSE). PRs for new language packs and improvements are welcome.
 
 ---
 

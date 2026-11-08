@@ -50,6 +50,17 @@ if(WIN32)
     target_link_libraries(StrataTray PRIVATE dwmapi iphlpapi)
 endif()
 
+# ---- 多语言包：构建后复制到 release/i18n/ ----
+# 贡献者新增 resources/i18n/xx_YY.json 后无需修改 qrc 或任何 C++ 代码，
+# 程序启动时会动态发现该目录里的语言包并挂到二级子菜单。
+file(GLOB I18N_JSON CONFIGURE_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/resources/i18n/*.json")
+if(I18N_JSON)
+    add_custom_command(TARGET StrataTray POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_SOURCE_DIR}/release/i18n"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different ${I18N_JSON} "${CMAKE_SOURCE_DIR}/release/i18n/"
+        COMMENT "Deploying i18n language packs")
+endif()
+
 # 输出目录固定为 release/，windeployqt 与桌面快捷方式都指向这里
 set_target_properties(StrataTray PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/release"

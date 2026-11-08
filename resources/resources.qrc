@@ -2,4 +2,11 @@
   <qresource prefix="/icons">
     <file alias="check.svg">check.svg</file>
   </qresource>
+  <!-- 内嵌基线语言包：即使只带一个 exe 也能显示中英文。
+       新增语言无需改这里：构建时会自动把 resources/i18n/*.json 复制到 release/i18n/，
+       程序在运行时动态发现该目录里的语言包。 -->
+  <qresource prefix="/i18n">
+    <file alias="en.json">i18n/en.json</file>
+    <file alias="zh_CN.json">i18n/zh_CN.json</file>
+  </qresource>
 </RCC>

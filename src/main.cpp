@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
 
     if (!QSystemTrayIcon::isSystemTrayAvailable()) {
         QMessageBox::critical(nullptr, QStringLiteral("Strata"),
-                              I18n::s("系统托盘不可用。", "System tray is not available."));
+                              I18n::t("tray_unavailable"));
         return 1;
     }
     if (TrayApp::notifyExistingInstance()) return 0;   // 已有实例：置顶后静默退出

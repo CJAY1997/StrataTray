@@ -5,18 +5,17 @@
 #include "I18n.h"
 
 // 可复用的「界面语言」二级子菜单构建器。
-// 齿轮设置菜单与托盘右键菜单共用这一份逻辑；新增语种时无需改动本文件，
-// 只要在 I18n.cpp 的注册表加一行，两处子菜单会自动多出对应单选项。
+// 菜单项完全来自 I18n 运行时发现的语言包（内嵌资源 + exe 旁 i18n/ 目录），
+// 因此贡献者新增一个 JSON 文件后，齿轮菜单与托盘菜单会自动多出该语种。
 namespace LanguageMenu {
 
 // 刷新子菜单标题与互斥勾选状态（启动时、语言切换后各调一次）
 inline void retranslate(QMenu *sub) {
     if (!sub) return;
-    sub->setTitle(I18n::zh() ? QString::fromUtf8("🌐 界面语言 (Language)")
-                             : QString::fromUtf8("🌐 Language (界面语言)"));
-    const int current = static_cast<int>(I18n::instance().lang());
+    sub->setTitle(I18n::t("lang_menu"));
+    const QString current = I18n::instance().langId();
     for (QAction *a : sub->actions()) {
-        if (a->data().toInt() == current) {
+        if (a->data().toString() == current) {
             a->setChecked(true);        // 只发 toggled，不会触发 setLang 形成回环
             break;
         }
@@ -29,12 +28,12 @@ inline QMenu *create(QMenu *parent, QObject *receiver) {
     auto *group = new QActionGroup(receiver);
     group->setExclusive(true);          // 互斥单选：当前语种显示选中标记
 
-    for (const auto &info : I18n::supportedLanguages()) {
-        QAction *a = sub->addAction(QString::fromUtf8(info.nativeName));
+    for (const auto &info : I18n::instance().languages()) {
+        QAction *a = sub->addAction(info.name);
         a->setCheckable(true);
-        a->setData(static_cast<int>(info.id));   // 用枚举值关联，避免依赖菜单文本
+        a->setData(info.id);            // 用语言包 id 关联，不依赖显示文本
         a->setActionGroup(group);
-        const I18n::Lang id = info.id;
+        const QString id = info.id;
         QObject::connect(a, &QAction::triggered, receiver,
                          [id] { I18n::instance().setLang(id); });
     }

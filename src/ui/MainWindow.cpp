@@ -46,9 +46,7 @@
 
 #include <tuple>
 
-static inline QString L(const char *zhText, const char *enText) {
-    return I18n::s(zhText, enText);
-}
+static inline QString L(const char *key) { return I18n::t(key); }
 
 MainWindow::MainWindow(QWidget *parent) : QWidget(parent) {
     setObjectName(QStringLiteral("rootWindow"));
@@ -70,10 +68,10 @@ MainWindow::MainWindow(QWidget *parent) : QWidget(parent) {
         QDesktopServices::openUrl(QUrl::fromLocalFile(Config::instance().logFile()));
     });
     connect(m_btnCopyBase, &QPushButton::clicked, this, [this] {
-        copyUrl(Config::url(), m_btnCopyBase, L("复制 Base", "Copy Base"));
+        copyUrl(Config::url(), m_btnCopyBase, L("copy_base"));
     });
     connect(m_btnCopyApi, &QPushButton::clicked, this, [this] {
-        copyUrl(Config::url() + QStringLiteral("/v1"), m_btnCopyApi, L("复制 /v1", "Copy /v1"));
+        copyUrl(Config::url() + QStringLiteral("/v1"), m_btnCopyApi, L("copy_v1"));
     });
     connect(m_btnCheck, &QPushButton::clicked, this, &MainWindow::checkRequested);
     connect(m_btnRelease, &QPushButton::clicked, this, [this] {
@@ -389,7 +387,7 @@ void MainWindow::showWindow() {
 
 void MainWindow::copyUrl(const QString &text, QPushButton *btn, const QString &label) {
     QGuiApplication::clipboard()->setText(text);
-    btn->setText(L("已复制 ✓", "Copied ✓"));
+    btn->setText(L("copied"));
     btn->setStyleSheet(QStringLiteral(
         "QPushButton#btnMini{background:#143024;color:#4ade80;border-color:#1d5b3b;}"));
     QTimer::singleShot(1500, this, [this, btn, label] {
@@ -427,39 +425,37 @@ void MainWindow::setVersion(const VersionInfo &v) {
     m_hasUpdate = v.hasUpdate;
     m_releaseUrl = v.url;
 
-    setVersionBadge(v.hasUpdate ? L("有新版可更新", "Update Available")
-                                : L("已是最新", "Up to date"),
+    setVersionBadge(v.hasUpdate ? L("update_available")
+                                : L("up_to_date"),
                     v.hasUpdate ? QStringLiteral("#fbbf24") : QStringLiteral("#4ade80"),
                     v.hasUpdate ? QStringLiteral("#3a2a12") : QStringLiteral("#143024"),
                     v.hasUpdate ? QStringLiteral("#78500f") : QStringLiteral("#1d5b3b"));
     m_versionBadge->setToolTip(v.remoteName);
 
     const QString gap = v.behind > 0
-        ? L("落后 %1 个提交", "%1 commits behind").arg(v.behind)
-        : L("无", "none");
+        ? L("n_commits_behind").arg(v.behind)
+        : L("none");
     m_localInfo->setText(QStringLiteral(
         "<div style='line-height:1.6'><span style='color:#71717a'>%1</span>&nbsp;&nbsp;"
         "<b style='color:#e4e4e7'>%2</b><br><span style='color:#71717a'>%3</span>&nbsp;&nbsp;%4 · %5 %6</div>")
-        .arg(L("本地", "Local"), v.localDesc.toHtmlEscaped(), L("引擎", "Engine"),
-             v.engine, L("提交", "commit"), v.localTag.toHtmlEscaped()));
+        .arg(L("local"), v.localDesc.toHtmlEscaped(), L("engine"),
+             v.engine, L("commit"), v.localTag.toHtmlEscaped()));
     m_remoteInfo->setText(QStringLiteral(
         "<div style='line-height:1.6'><span style='color:#71717a'>%1</span>&nbsp;&nbsp;"
         "<b style='color:#e4e4e7'>%2</b><br><span style='color:#71717a'>%3</span>&nbsp;&nbsp;%4 · %5 %6<br>"
         "<span style='color:#71717a'>%7</span>&nbsp;&nbsp;%8</div>")
-        .arg(L("线上", "Upstream"), v.remoteTag.toHtmlEscaped(), L("发布", "Released"),
-             v.published.toHtmlEscaped(), L("引擎", "Engine"), v.remoteEngine,
-             L("差距", "Gap"), gap));
+        .arg(L("upstream"), v.remoteTag.toHtmlEscaped(), L("released"),
+             v.published.toHtmlEscaped(), L("engine"), v.remoteEngine,
+             L("gap"), gap));
 
     if (!m_updateMode) {
         if (v.hasUpdate) {
-            m_updateState->setText(L("发现官方新版，可点击下方立即更新",
-                                    "New release available. Click Update Now below."));
+            m_updateState->setText(L("new_release_available_click_update_now_b"));
             m_updateState->setStyleSheet(QStringLiteral("QLabel{color:#fbbf24;font-size:9pt;}"));
         } else {
             const QString hhmm = v.checkedAt.length() >= 16
                 ? v.checkedAt.mid(11, 5) : QStringLiteral("--:--");
-            m_updateState->setText(L("已是最新版本 · 检查于 %1",
-                                    "Up to date · checked at %1").arg(hhmm));
+            m_updateState->setText(L("up_to_date_checked_at_n").arg(hhmm));
             m_updateState->setStyleSheet(QStringLiteral("QLabel{color:#71717a;font-size:9pt;}"));
         }
         m_progressBar->hide();
@@ -475,10 +471,10 @@ void MainWindow::renderVersionText(const VersionInfo &v) {
     if (m_updateMode) return;
     QString html = QStringLiteral("<div style='color:#e4e4e7'>");
     html += QStringLiteral("<h3 style='color:#7dd3fc;font-size:11pt;margin:0 0 8px 0;'>%1</h3>")
-            .arg(L("本次更新要点", "Release Highlights"));
+            .arg(L("release_highlights"));
     if (v.highlights.isEmpty()) {
         html += QStringLiteral("<p style='color:#71717a;margin:0;'>%1</p>")
-                .arg(L("官方未提供要点", "No highlights provided"));
+                .arg(L("no_highlights_provided"));
     } else {
         html += QStringLiteral("<ul style='margin:0 0 12px 18px;line-height:1.65;color:#d4d4d8;'>");
         for (const QString &h : v.highlights)
@@ -486,9 +482,9 @@ void MainWindow::renderVersionText(const VersionInfo &v) {
         html += QStringLiteral("</ul>");
     }
     html += QStringLiteral("<p style='color:#71717a;font-size:9pt;margin:0 0 12px 0;'>%1 %2")
-            .arg(L("检查时间", "Checked at"), v.checkedAt.toHtmlEscaped());
+            .arg(L("checked_at"), v.checkedAt.toHtmlEscaped());
     if (v.behind >= 0)
-        html += QStringLiteral(" · %1 %2").arg(L("待更新提交", "commits behind")).arg(v.behind);
+        html += QStringLiteral(" · %1 %2").arg(L("commits_behind")).arg(v.behind);
     if (!v.error.isEmpty())
         html += QStringLiteral("<br><span style='color:#fbbf24'>%1</span>").arg(v.error.toHtmlEscaped());
     html += QStringLiteral("</p>");
@@ -497,8 +493,8 @@ void MainWindow::renderVersionText(const VersionInfo &v) {
     if (!list.isEmpty()) {
         html += QStringLiteral("<h3 style='color:#a78bfa;font-size:11pt;margin:4px 0 8px 0;'>%1</h3>")
                 .arg(!v.commits.isEmpty()
-                     ? L("待更新的提交（最近 10 条）", "Pending commits (latest 10)")
-                     : L("当前版本最近提交", "Recent commits"));
+                     ? L("pending_commits_latest_10")
+                     : L("recent_commits"));
         html += QStringLiteral("<div style='font-family:Consolas,monospace;font-size:9pt;color:#a1a1aa;line-height:1.6;'>");
         for (const QString &c : list) html += QStringLiteral("%1<br>").arg(c.toHtmlEscaped());
         html += QStringLiteral("</div>");
@@ -512,14 +508,14 @@ void MainWindow::beginUpdate() {
     m_updateMode = true;
     m_hasResult = false;
     m_stageNum = 0;
-    m_stageName = L("启动", "Starting");
+    m_stageName = L("starting");
     m_btnCheck->setEnabled(false);
     refreshActionButtons();
     m_updateState->setStyleSheet(QStringLiteral("QLabel{color:#fbbf24;font-size:9pt;font-weight:600;}"));
     m_progressBar->setStyleSheet(QString());
     m_progressBar->setValue(0);
     m_progressBar->show();
-    m_versionView->setPlainText(L("=== 更新日志（实时）===\n", "=== Update log (live) ===\n"));
+    m_versionView->setPlainText(L("update_log_live"));
     m_elapsed.start();
     m_progressTimer->start(1000);
     refreshProgressLabel();
@@ -528,10 +524,10 @@ void MainWindow::beginUpdate() {
 void MainWindow::appendUpdateLog(const QString &chunk, int step) {
     if (chunk.isEmpty()) return;
     if (step > 0) {
-        static const char *zh[] = {"", "停止服务", "拉取官方新版", "更新引擎与依赖", "重新接入定制层", "完成"};
-        static const char *en[] = {"", "Stop service", "Pull upstream", "Update engine", "Reapply local layer", "Done"};
+        static const char *stageKeys[] = {"", "stage_stop", "stage_pull",
+                                         "stage_engine", "stage_reapply", "stage_done"};
         m_stageNum = step;
-        m_stageName = I18n::zh() ? QString::fromUtf8(zh[step]) : QString::fromUtf8(en[step]);
+        m_stageName = L(stageKeys[step]);
         m_progressBar->setValue(step);
     }
     const QString all = m_versionView->toPlainText() + chunk;
@@ -555,8 +551,8 @@ void MainWindow::finishUpdate(bool ok, int code) {
     m_serviceStarting = false;
     renderUpdateResult();
     m_versionView->append(ok
-        ? L("\n=== 更新完成（退出码 0）===", "\n=== Update complete (exit 0) ===")
-        : L("\n=== 更新中断（退出码 %1）===", "\n=== Update failed (exit %1) ===").arg(code));
+        ? L("update_complete_exit_0")
+        : L("update_failed_exit_n").arg(code));
     m_versionView->moveCursor(QTextCursor::End);
     refreshActionButtons();
 }
@@ -566,20 +562,17 @@ void MainWindow::renderUpdateResult() {
     if (m_resultOk) {
         m_progressBar->setValue(5);
         m_progressBar->setStyleSheet(QStringLiteral("QProgressBar#updateBar::chunk{background:#22c55e;}"));
-        m_updateState->setText(L("更新完成 · 耗时 %1 · 正在核对版本",
-                                 "Update complete in %1 · verifying").arg(elapsedText()));
+        m_updateState->setText(L("update_complete_in_n_verifying").arg(elapsedText()));
         m_updateState->setStyleSheet(QStringLiteral("QLabel{color:#4ade80;font-size:9pt;font-weight:600;}"));
     } else {
-        m_updateState->setText(L("更新未完成 · 退出码 %1 · 详见 update-local.log",
-                                 "Update failed (exit %1) · see update-local.log").arg(m_resultCode));
+        m_updateState->setText(L("update_failed_exit_n_see_update_local_lo").arg(m_resultCode));
         m_updateState->setStyleSheet(QStringLiteral("QLabel{color:#f87171;font-size:9pt;font-weight:600;}"));
     }
 }
 
 void MainWindow::refreshProgressLabel() {
     if (!m_updateMode || !m_elapsed.isValid()) return;
-    m_updateState->setText(L("更新中 · 第 %1/5 步：%2　已用时 %3",
-                             "Updating · step %1/5: %2 · elapsed %3")
+    m_updateState->setText(L("updating_step_n_5_n_elapsed_n")
                            .arg(m_stageNum).arg(m_stageName).arg(elapsedText()));
 }
 
@@ -591,46 +584,44 @@ QString MainWindow::elapsedText() const {
 
 void MainWindow::refreshActionButtons() {
     if (m_updateMode) {
-        m_btnStart->setText(L("启动服务", "Start Service"));
+        m_btnStart->setText(L("start_service"));
         m_btnStart->setEnabled(false);
         m_btnStop->setEnabled(false);
         m_btnStop->setStyleSheet(QString());
         m_btnOpen->setEnabled(false);
         m_btnUpdate->setEnabled(false);
-        m_btnUpdate->setText(L("更新中…", "Updating…"));
-        m_btnUpdate->setToolTip(L("升级进行中，启动 / 停止 / 打开网页已暂停",
-                                  "Update in progress; service controls are paused"));
+        m_btnUpdate->setText(L("updating"));
+        m_btnUpdate->setToolTip(L("update_in_progress_service_controls_are"));
         return;
     }
     if (m_serviceStarting) {
-        m_btnStart->setText(L("加载模型中…", "Loading model…"));
+        m_btnStart->setText(L("loading_model"));
         m_btnStart->setEnabled(false);
     } else if (m_serviceReady) {
-        m_btnStart->setText(L("运行中", "Running"));
+        m_btnStart->setText(L("running"));
         m_btnStart->setEnabled(false);
     } else {
-        m_btnStart->setText(L("启动服务", "Start Service"));
+        m_btnStart->setText(L("start_service"));
         m_btnStart->setEnabled(m_serviceStopped || m_serviceOrphan);
     }
     m_btnStop->setEnabled(!m_serviceStopped);
     if (m_serviceReady) {
         m_btnStop->setStyleSheet(QStringLiteral(
             "QPushButton#btnDanger{background:#7f1d1d;border-color:#ef4444;color:#ffffff;}"));
-        m_btnStop->setToolTip(L("点击停止服务并释放显存", "Stop the service and free VRAM"));
+        m_btnStop->setToolTip(L("stop_the_service_and_free_vram"));
     } else {
         m_btnStop->setStyleSheet(QString());
         m_btnStop->setToolTip(m_serviceOrphan
-            ? L("引擎运行但端口未响应，点击停止服务进行清理",
-                "Engine running but port not responding; click to clean up")
-            : L("停止服务并释放显存", "Stop the service and free VRAM"));
+            ? L("engine_running_but_port_not_responding_c")
+            : L("stop_the_service_and_free_vram_2"));
     }
     m_btnOpen->setEnabled(m_serviceReady);
     m_btnUpdate->setEnabled(m_hasUpdate && m_serviceStopped);
-    m_btnUpdate->setText(m_serviceStopped ? L("立即更新", "Update Now")
-                                          : L("先停止服务", "Stop Service First"));
+    m_btnUpdate->setText(m_serviceStopped ? L("update_now")
+                                          : L("stop_service_first"));
     m_btnUpdate->setToolTip(m_serviceStopped
-        ? L("按官方流程升级（会先停止服务）", "Run the official updater")
-        : L("运行中的模型不能升级，请先点「停止服务」", "Stop the service before updating"));
+        ? L("run_the_official_updater")
+        : L("stop_the_service_before_updating"));
 }
 
 void MainWindow::setVersionBadge(const QString &text, const QString &fg,
@@ -642,14 +633,14 @@ void MainWindow::setVersionBadge(const QString &text, const QString &fg,
 }
 
 void MainWindow::setVersionChecking() {
-    setVersionBadge(L("检查中…", "Checking…"), QStringLiteral("#a1a1aa"),
+    setVersionBadge(L("checking"), QStringLiteral("#a1a1aa"),
                     QStringLiteral("#252529"), QStringLiteral("#3a3a42"));
     m_btnCheck->setEnabled(false);
 }
 
 void MainWindow::setVersionError(const QString &message) {
     m_checkError = message;
-    setVersionBadge(L("检查失败", "Check failed"), QStringLiteral("#f87171"),
+    setVersionBadge(L("check_failed"), QStringLiteral("#f87171"),
                     QStringLiteral("#3a1a1a"), QStringLiteral("#7f2d2d"));
     m_versionBadge->setToolTip(message);
     m_btnCheck->setEnabled(true);
@@ -661,22 +652,21 @@ void MainWindow::applySnapshot(const Snapshot &s) {
     QString text, dot, fg, bg, border;
     switch (s.state) {
     case State::Ready:
-        text = L("运行中（就绪）", "Running (Ready)"); dot = QStringLiteral("#22c55e");
+        text = L("running_ready"); dot = QStringLiteral("#22c55e");
         fg = QStringLiteral("#4ade80"); bg = QStringLiteral("#143024"); border = QStringLiteral("#1d5b3b"); break;
     case State::Starting:
-        text = L("加载中（模型加载）", "Loading model"); dot = QStringLiteral("#f59e0b");
+        text = L("loading_model_2"); dot = QStringLiteral("#f59e0b");
         fg = QStringLiteral("#fbbf24"); bg = QStringLiteral("#3a2a12"); border = QStringLiteral("#78500f"); break;
     case State::Orphan:
-        text = L("异常（服务未监听）", "Error (no listener)"); dot = QStringLiteral("#ef4444");
+        text = L("error_no_listener"); dot = QStringLiteral("#ef4444");
         fg = QStringLiteral("#fca5a5"); bg = QStringLiteral("#3a1a1a"); border = QStringLiteral("#7f2d2d"); break;
     case State::Stopped:
-        text = L("已停止", "Stopped"); dot = QStringLiteral("#71717a");
+        text = L("stopped"); dot = QStringLiteral("#71717a");
         fg = QStringLiteral("#a1a1aa"); bg = QStringLiteral("#252529"); border = QStringLiteral("#3a3a42"); break;
     }
     m_stateBadge->setText(text);
     m_badgePill->setToolTip(s.state == State::Orphan
-        ? L("引擎运行但端口未响应，可点「停止服务」进行清理",
-            "Engine running but port not responding; stop the service to clean up")
+        ? L("engine_running_but_port_not_responding_s")
         : QString());
     m_badgePill->setStyleSheet(QStringLiteral(
         "QWidget#badgePill{background:%1;border:1px solid %2;border-radius:11px;}"
@@ -685,15 +675,15 @@ void MainWindow::applySnapshot(const Snapshot &s) {
         .arg(bg, border, fg, dot));
 
     const QString pidText = s.pid
-        ? L("PID %1 · 已运行 %2", "PID %1 · uptime %2").arg(s.pid).arg(s.uptime)
+        ? L("pid_n_uptime_n").arg(s.pid).arg(s.uptime)
         : QStringLiteral("—");
     const QString modelText = s.hasHealth
-        ? L("%1 · 上下文 %2 tokens", "%1 · context %2 tokens").arg(s.model.toHtmlEscaped()).arg(s.maxContext)
-        : L("—（服务没在监听）", "— (no listener)");
+        ? L("n_context_n_tokens").arg(s.model.toHtmlEscaped()).arg(s.maxContext)
+        : L("no_listener");
     m_info->setText(QStringLiteral(
         "<div style='line-height:1.65'><span style='color:#71717a'>%1</span>&nbsp;&nbsp;%2<br>"
         "<span style='color:#71717a'>%3</span>&nbsp;&nbsp;%4</div>")
-        .arg(L("进程", "Process"), pidText, L("模型", "Model"), modelText));
+        .arg(L("process"), pidText, L("model"), modelText));
 
     const auto gpu = Probe::gpuMem();
     if (gpu.has_value()) {
@@ -702,7 +692,7 @@ void MainWindow::applySnapshot(const Snapshot &s) {
         m_vramPct->setText(QStringLiteral("%1%").arg(gpu->percent()));
         m_vramBar->setValue(gpu->percent());
     } else {
-        m_vramLabel->setText(L("不可用", "unavailable"));
+        m_vramLabel->setText(L("unavailable"));
         m_vramPct->clear();
         m_vramBar->setValue(0);
     }
@@ -715,49 +705,45 @@ void MainWindow::applySnapshot(const Snapshot &s) {
 }
 
 void MainWindow::retranslateUi() {
-    setWindowTitle(L("Strata 本地大模型", "Strata Local LLM"));
-    m_svcTitle->setText(L("服务状态", "Service Status"));
-    m_verTitle->setText(L("版本与更新", "Version & Update"));
+    setWindowTitle(L("app_title"));
+    m_svcTitle->setText(L("service_status"));
+    m_verTitle->setText(L("version_update"));
     // 右上角设置按钮及其菜单：语言子菜单标题与勾选状态跟随当前语种
-    m_btnSettings->setToolTip(L("设置与更多选项", "Settings & More"));
+    m_btnSettings->setToolTip(L("settings_more"));
     LanguageMenu::retranslate(m_langMenu);
-    m_actAutoRun->setText(I18n::zh() ? QString::fromUtf8("🚀 开机自启动")
-                                     : QString::fromUtf8("🚀 Run at Startup"));
+    m_actAutoRun->setText(L("menu_run_at_startup"));
     {
         QSignalBlocker blocker(m_actAutoRun);   // 仅同步显示，不触发注册表写入
         m_actAutoRun->setChecked(Config::autoRunEnabled());
     }
-    m_actOpenDir->setText(I18n::zh() ? QString::fromUtf8("📁 打开 Strata 根目录")
-                                     : QString::fromUtf8("📁 Open Strata Folder"));
-    m_urlCap->setText(L("地址", "URL"));
-    m_vramCap->setText(L("显存", "VRAM"));
-    m_btnCopyBase->setText(L("复制 Base", "Copy Base"));
-    m_btnCopyApi->setText(L("复制 /v1", "Copy /v1"));
-    m_btnCopyApi->setToolTip(L("复制 OpenAI 兼容接口 %1/v1",
-                               "Copy the OpenAI-compatible endpoint %1/v1").arg(Config::url()));
-    m_btnLog->setText(L("刷新", "Refresh"));
-    m_btnOpenLog->setText(L("打开日志文件", "Open Log File"));
-    m_btnClearLog->setText(L("清空", "Clear"));
-    m_btnClearLog->setToolTip(L("只清空当前视图，不删除日志文件",
-                                "Clear the view only, not the log file"));
-    m_logAutoScroll->setText(L("自动滚动到末尾", "Auto Scroll to End"));
-    m_btnCheck->setText(L("重新检查", "Recheck"));
-    m_btnRelease->setText(L("完整更新说明", "Full Release Notes"));
-    m_tabs->setTabText(0, L("最近日志", "Recent Logs"));
-    m_tabs->setTabText(1, L("更新内容", "Release Notes"));
+    m_actOpenDir->setText(L("menu_open_strata_dir"));
+    m_urlCap->setText(L("url"));
+    m_vramCap->setText(L("vram"));
+    m_btnCopyBase->setText(L("copy_base"));
+    m_btnCopyApi->setText(L("copy_v1"));
+    m_btnCopyApi->setToolTip(L("copy_the_openai_compatible_endpoint_n_v1").arg(Config::url()));
+    m_btnLog->setText(L("refresh"));
+    m_btnOpenLog->setText(L("open_log_file"));
+    m_btnClearLog->setText(L("clear"));
+    m_btnClearLog->setToolTip(L("clear_the_view_only_not_the_log_file"));
+    m_logAutoScroll->setText(L("auto_scroll"));
+    m_btnCheck->setText(L("recheck"));
+    m_btnRelease->setText(L("full_release_notes"));
+    m_tabs->setTabText(0, L("recent_logs"));
+    m_tabs->setTabText(1, L("release_notes"));
     if (!m_hasSnapshot) {
-        m_stateBadge->setText(L("检测中…", "Detecting…"));
+        m_stateBadge->setText(L("detecting"));
         m_info->setText(QString());
         m_vramLabel->setText(QStringLiteral("—"));
     }
     if (!m_hasVersion) {
-        setVersionBadge(L("检查中…", "Checking…"), QStringLiteral("#a1a1aa"),
+        setVersionBadge(L("checking"), QStringLiteral("#a1a1aa"),
                         QStringLiteral("#252529"), QStringLiteral("#3a3a42"));
-        m_localInfo->setText(L("本地：读取中…", "Local: loading…"));
-        m_remoteInfo->setText(L("线上：读取中…", "Upstream: loading…"));
-        m_updateState->setText(L("尚未开始更新", "No update running"));
+        m_localInfo->setText(L("local_loading"));
+        m_remoteInfo->setText(L("upstream_loading"));
+        m_updateState->setText(L("no_update_running"));
         m_versionView->setHtml(QStringLiteral("<p style='color:#71717a'>%1</p>")
-                               .arg(L("正在检查线上版本…", "Checking upstream version…")));
+                               .arg(L("checking_upstream_version")));
     }
     if (m_hasSnapshot) applySnapshot(m_lastSnapshot);
     if (m_hasVersion) {

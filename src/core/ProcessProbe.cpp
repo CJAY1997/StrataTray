@@ -1,4 +1,5 @@
 #include "ProcessProbe.h"
+#include "ui/I18n.h"
 #include "Config.h"
 
 #include <QtCore/QFile>
@@ -114,13 +115,13 @@ QString Probe::procUptime(int pid) {
     ULARGE_INTEGER a, b;
     a.LowPart = created.dwLowDateTime; a.HighPart = created.dwHighDateTime;
     b.LowPart = now.dwLowDateTime;     b.HighPart = now.dwHighDateTime;
-    if (b.QuadPart <= a.QuadPart) return QStringLiteral("0 秒");
+    if (b.QuadPart <= a.QuadPart) return I18n::t("uptime_zero");
     const quint64 secs = (b.QuadPart - a.QuadPart) / 10000000ULL;
     const auto [hh, rem] = std::pair<int, quint64>{int(secs / 3600), secs % 3600};
     const auto [mm, ss] = std::pair<int, quint64>{int(rem / 60), rem % 60};
-    if (hh) return QStringLiteral("%1 小时 %2 分").arg(hh).arg(int(mm));
-    if (mm) return QStringLiteral("%1 分 %2 秒").arg(int(mm)).arg(int(ss));
-    return QStringLiteral("%1 秒").arg(int(ss));
+    if (hh) return I18n::t("uptime_hm").arg(hh).arg(int(mm));
+    if (mm) return I18n::t("uptime_ms").arg(int(mm)).arg(int(ss));
+    return I18n::t("uptime_s").arg(int(ss));
 #else
     return QStringLiteral("—");
 #endif
@@ -156,7 +157,7 @@ Snapshot Probe::probeLocal() {
 
 QString Probe::tailLog(int lines) {
     QFile f(Config::instance().logFile());
-    if (!f.open(QIODevice::ReadOnly)) return QStringLiteral("（无日志文件）");
+    if (!f.open(QIODevice::ReadOnly)) return I18n::t("no_log_file");
     const qint64 size = f.size();
     constexpr qint64 limit = 64 * 1024;
     const bool tailOnly = size > limit;
