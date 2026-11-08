@@ -12,7 +12,7 @@ StrataTray 是 Strata 官方仓库之外的**独立桌面外壳**，用现代 C+
 
 ### 普通用户使用指南（开箱即用）
 
-1. **下载解压即用**：从 Releases 下载 `StrataTray-*.zip`，解压到任意位置；不需要安装、不需要管理员权限、不会弹黑框。
+1. **下载解压即用**：从 [Releases 页面](https://github.com/CJAY1997/StrataTray/releases) 下载最新的 `StrataTray-*.zip`，解压到任意位置；不需要安装、不需要管理员权限、不会弹黑框。
 2. **自动识别 Strata**：把解压后的 `trayapp` 文件夹放在 Strata 目录下（例如 `Strata/trayapp/release/StrataTray.exe`），程序会自动向上找到含 `stratactl.py` 的根目录；也可设置环境变量 `STRATA_PATH` 指向任意 Strata 安装位置。
 3. **启动本地模型**：双击 `StrataTray.exe` → 点「启动服务」，等状态徽章变成绿色「运行中（就绪）」。
 4. **在第三方客户端里开始对话**：点窗口里的 **「复制 /v1」**，把 OpenAI 兼容接口地址

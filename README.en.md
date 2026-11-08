@@ -12,7 +12,7 @@ StrataTray is an independent desktop shell for Strata, written in modern C++17 /
 
 ### User Guide (for everyone)
 
-1. **Download, unzip, run.** Grab `StrataTray-*.zip` from Releases, extract anywhere — no installer, no admin rights, no console window.
+1. **Download, unzip, run.** Grab the latest `StrataTray-*.zip` from the [Releases page](https://github.com/CJAY1997/StrataTray/releases), extract anywhere — no installer, no admin rights, no console window.
 2. **Automatic Strata detection.** Put the extracted `trayapp` folder inside your Strata checkout (e.g. `Strata/trayapp/release/StrataTray.exe`); the app walks up to the folder containing `stratactl.py`. Alternatively set `STRATA_PATH` to any Strata installation.
 3. **Start the model.** Double-click `StrataTray.exe` → **Start Service** → wait for the green "Running (Ready)" badge.
 4. **Chat from your favourite client.** Click **Copy /v1** and paste the OpenAI-compatible endpoint
