@@ -96,19 +96,7 @@ void MainWindow::buildUi() {
     root->setContentsMargins(16, 14, 16, 14);
     root->setSpacing(12);
 
-    // 顶层工具栏：只在最右侧放「设置 / 更多」按钮，双卡片保持完整平齐
-    auto *topBar = new QHBoxLayout();
-    topBar->setContentsMargins(0, 0, 0, 0);
-    topBar->setSpacing(0);
-    topBar->addStretch(1);
-    m_btnSettings = new QPushButton(QString::fromUtf8("⚙"), this);
-    m_btnSettings->setObjectName(QStringLiteral("btnGhost"));   // 无背景，悬停微亮
-    m_btnSettings->setFixedSize(30, 26);
-    m_btnSettings->setCursor(QCursor(Qt::PointingHandCursor));
-    topBar->addWidget(m_btnSettings);
-    root->addLayout(topBar);
-
-    // 弹出菜单（沿用全局深色 QMenu 样式）
+    // 弹出菜单（沿用全局深色 QMenu 样式）；按钮本体在右卡片标题栏中创建
     m_settingsMenu = new QMenu(this);
     m_actLang = m_settingsMenu->addAction(QString());
     connect(m_actLang, &QAction::triggered, this, [] { I18n::instance().toggle(); });
@@ -125,12 +113,6 @@ void MainWindow::buildUi() {
     m_actOpenDir = m_settingsMenu->addAction(QString());
     connect(m_actOpenDir, &QAction::triggered, this, [] {
         QDesktopServices::openUrl(QUrl::fromLocalFile(Config::instance().root()));
-    });
-
-    connect(m_btnSettings, &QPushButton::clicked, this, [this] {
-        // 在按钮正下方弹出，避免遮住卡片
-        m_settingsMenu->exec(m_btnSettings->mapToGlobal(
-            QPoint(0, m_btnSettings->height() + 4)));
     });
 
     auto *cards = new QHBoxLayout();
@@ -215,14 +197,44 @@ void MainWindow::buildUi() {
     vv->setContentsMargins(16, 14, 16, 14);
     vv->setSpacing(9);
     auto *verTitleRow = new QHBoxLayout();
+    verTitleRow->setSpacing(6);
     m_verTitle = new QLabel(ver);
     m_verTitle->setObjectName(QStringLiteral("cardTitle"));
     m_versionBadge = new QLabel(ver);
     m_versionBadge->setObjectName(QStringLiteral("verBadge"));
+
+    // 设置按钮嵌在标题栏最右端：专属样式清零 padding，避免 ⚙ 被挤压裁切
+    m_btnSettings = new QPushButton(QString::fromUtf8("⚙"), ver);
+    m_btnSettings->setObjectName(QStringLiteral("btnSettings"));
+    m_btnSettings->setFixedSize(24, 22);
+    m_btnSettings->setCursor(QCursor(Qt::PointingHandCursor));
+    m_btnSettings->setStyleSheet(
+        "QPushButton#btnSettings {"
+        "  background: transparent;"
+        "  border: 1px solid transparent;"
+        "  border-radius: 4px;"
+        "  color: #a1a1aa;"
+        "  font-size: 11pt;"
+        "  padding: 0px;"
+        "}"
+        "QPushButton#btnSettings:hover {"
+        "  background: #2b2b31;"
+        "  border-color: #3a3a42;"
+        "  color: #fafafa;"
+        "}"
+    );
+
     verTitleRow->addWidget(m_verTitle);
     verTitleRow->addStretch(1);
     verTitleRow->addWidget(m_versionBadge);
+    verTitleRow->addWidget(m_btnSettings);
     vv->addLayout(verTitleRow);
+
+    connect(m_btnSettings, &QPushButton::clicked, this, [this] {
+        // 在按钮正下方弹出，避免遮住卡片内容
+        m_settingsMenu->exec(m_btnSettings->mapToGlobal(
+            QPoint(0, m_btnSettings->height() + 4)));
+    });
 
     m_localInfo = new QLabel(ver);
     m_remoteInfo = new QLabel(ver);
