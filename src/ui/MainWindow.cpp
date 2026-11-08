@@ -399,12 +399,17 @@ void MainWindow::refreshTheme() {
 void MainWindow::applyTitleBarTheme() {
 #ifdef Q_OS_WIN
     HWND hwnd = reinterpret_cast<HWND>(winId());
-    // 亮色主题必须显式关闭沉浸式暗色，否则系统标题栏仍是黑底
     BOOL darkMode = ThemeManager::instance().isDark() ? TRUE : FALSE;
-    DwmSetWindowAttribute(hwnd, 20 /* DWMWA_USE_IMMERSIVE_DARK_MODE */,
-                          &darkMode, sizeof(darkMode));
-    int corner = 2;   // DWMWCP_ROUND (Win11)
+    // 19 = 早期 Win10 的 DWMWA_USE_IMMERSIVE_DARK_MODE_BEFORE_20H1
+    // 20 = Win10 20H1+ / Win11 的 DWMWA_USE_IMMERSIVE_DARK_MODE；两者都设以保证全版本兼容
+    // 新版 Windows 会拒绝 19（E_INVALIDARG），忽略返回值即可，20 始终有效
+    DwmSetWindowAttribute(hwnd, 19, &darkMode, sizeof(darkMode));
+    DwmSetWindowAttribute(hwnd, 20, &darkMode, sizeof(darkMode));
+    int corner = 2;   // DWMWCP_ROUND（Win11 原生圆角）
     DwmSetWindowAttribute(hwnd, 33, &corner, sizeof(corner));
+    // 关键：通知 DWM 非客户区边框帧已变更，强制立即重算标题栏，消除延迟变色
+    SetWindowPos(hwnd, nullptr, 0, 0, 0, 0,
+                 SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
     RedrawWindow(hwnd, nullptr, nullptr, RDW_FRAME | RDW_INVALIDATE | RDW_UPDATENOW);
 #endif
 }
