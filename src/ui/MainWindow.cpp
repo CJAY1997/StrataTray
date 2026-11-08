@@ -7,6 +7,7 @@
 #include <QtCore/QUrl>
 #include <QtGui/QClipboard>
 #include <QtGui/QCloseEvent>
+#include <QtGui/QCursor>
 #include <QtGui/QDesktopServices>
 #include <QtGui/QGuiApplication>
 #include <QtGui/QKeySequence>
@@ -74,6 +75,8 @@ MainWindow::MainWindow(QWidget *parent) : QWidget(parent) {
         if (!m_releaseUrl.isEmpty()) QDesktopServices::openUrl(QUrl(m_releaseUrl));
     });
     connect(m_btnUpdate, &QPushButton::clicked, this, &MainWindow::updateRequested);
+    // 右上角语言按钮：与托盘菜单共用同一个 I18n 单例，切换后两处同步刷新
+    connect(m_btnLang, &QPushButton::clicked, this, [] { I18n::instance().toggle(); });
 
     auto *refreshShortcut = new QShortcut(QKeySequence(Qt::Key_F5), this);
     refreshShortcut->setContext(Qt::WindowShortcut);
@@ -175,12 +178,23 @@ void MainWindow::buildUi() {
     auto *verTitleRow = new QHBoxLayout();
     m_verTitle = new QLabel(ver);
     m_verTitle->setObjectName(QStringLiteral("cardTitle"));
-    m_versionBadge = new QLabel(ver);
-    m_versionBadge->setObjectName(QStringLiteral("verBadge"));
+    m_btnLang = new QPushButton(ver);
+    m_btnLang->setObjectName(QStringLiteral("btnMini"));   // 迷你按钮基础样式
+    m_btnLang->setProperty("langToggle", true);             // 主题中额外给蓝色强调，更显眼
+    m_btnLang->setCursor(QCursor(Qt::PointingHandCursor));
+    m_btnLang->setSizePolicy(QSizePolicy::Maximum, QSizePolicy::Fixed);
     verTitleRow->addWidget(m_verTitle);
     verTitleRow->addStretch(1);
-    verTitleRow->addWidget(m_versionBadge);
+    verTitleRow->addWidget(m_btnLang);                      // 窗口右上角
     vv->addLayout(verTitleRow);
+
+    // 版本状态徽章独占一行并右对齐，避免与标题、语言按钮挤在同一行溢出
+    m_versionBadge = new QLabel(ver);
+    m_versionBadge->setObjectName(QStringLiteral("verBadge"));
+    auto *verBadgeRow = new QHBoxLayout();
+    verBadgeRow->addStretch(1);
+    verBadgeRow->addWidget(m_versionBadge);
+    vv->addLayout(verBadgeRow);
 
     m_localInfo = new QLabel(ver);
     m_remoteInfo = new QLabel(ver);
@@ -657,6 +671,12 @@ void MainWindow::retranslateUi() {
     setWindowTitle(L("Strata 本地大模型", "Strata Local LLM"));
     m_svcTitle->setText(L("服务状态", "Service Status"));
     m_verTitle->setText(L("版本与更新", "Version & Update"));
+    // 按钮显示的是「点击后要切换到的目标语言」，与托盘菜单文案保持一致
+    m_btnLang->setText(I18n::zh() ? QString::fromUtf8("🌐 English")
+                                  : QString::fromUtf8("🌐 中文"));
+    m_btnLang->setToolTip(I18n::zh()
+        ? QString::fromUtf8("切换到英文界面 / Switch to English")
+        : QString::fromUtf8("切换到中文界面 / Switch to Chinese"));
     m_urlCap->setText(L("地址", "URL"));
     m_vramCap->setText(L("显存", "VRAM"));
     m_btnCopyBase->setText(L("复制 Base", "Copy Base"));

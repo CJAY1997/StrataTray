@@ -40,6 +40,10 @@ QPushButton#btnGhost:hover { background-color: #2b2b31; color: #e4e4e7; }
 QPushButton#btnMini { background-color: #2b2b31; border: 1px solid #3a3a42; color: #a1a1aa; border-radius: 6px; padding: 4px 11px; font-size: 9pt; }
 QPushButton#btnMini:hover   { background-color: #36363e; color: #e4e4e7; }
 QPushButton#btnMini:pressed { background-color: #232329; }
+/* 右上角语言切换按钮：沿用 btnMini 尺寸，额外用蓝色强调提升可见度 */
+QPushButton#btnMini[langToggle="true"] { background-color: #172554; border-color: #3b82f6; color: #bfdbfe; font-weight: 600; }
+QPushButton#btnMini[langToggle="true"]:hover { background-color: #1e3a8a; border-color: #60a5fa; color: #ffffff; }
+QPushButton#btnMini[langToggle="true"]:pressed { background-color: #1e40af; }
 QTextEdit { background-color: #141417; color: #d4d4d8; border: 1px solid #2f2f35; border-radius: 8px; padding: 8px; font-size: 9pt; selection-background-color: #3b82f6; }
 QTextEdit#logView     { font-family: Consolas, "Cascadia Code", monospace; }
 QTextEdit#versionView { font-family: "Segoe UI", "Microsoft YaHei UI", sans-serif; }

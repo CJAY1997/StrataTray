@@ -68,6 +68,7 @@ private:
     QPushButton *m_btnLog = nullptr, *m_btnOpenLog = nullptr, *m_btnClearLog = nullptr;
     QPushButton *m_btnCopyBase = nullptr, *m_btnCopyApi = nullptr;
     QPushButton *m_btnCheck = nullptr, *m_btnRelease = nullptr, *m_btnUpdate = nullptr;
+    QPushButton *m_btnLang = nullptr;   // 右上角语言切换按钮
     QCheckBox *m_logAutoScroll = nullptr;
     QProgressBar *m_vramBar = nullptr, *m_progressBar = nullptr;
     QTabWidget *m_tabs = nullptr;
