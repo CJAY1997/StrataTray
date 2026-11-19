@@ -26,6 +26,7 @@ public:
     void setVersion(const VersionInfo &v);
     void beginUpdate();
     void appendUpdateLog(const QString &chunk, int step);
+    QString updateLogTail(int lines = 24) const;   // 更新失败弹窗里的详情
     void finishUpdate(bool ok, int code);
     void setVersionChecking();
     void setVersionError(const QString &message);

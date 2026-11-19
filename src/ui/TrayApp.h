@@ -40,6 +40,8 @@ private:
     void applyVersion(const VersionInfo &v, bool notifyNew);
     void loadVersionCache();
     void notify(const QString &title, const QString &body);
+    // 失败弹窗：标题 + 说明 + 脚本输出摘要，附「打开日志」按钮；同时给出关键错误文字
+    void alert(const QString &title, const QString &body, const QString &detail = QString());
     QString stateText(State st) const;
 
     MainWindow *m_win = nullptr;

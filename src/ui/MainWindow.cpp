@@ -581,6 +581,12 @@ void MainWindow::beginUpdate() {
     refreshProgressLabel();
 }
 
+QString MainWindow::updateLogTail(int lines) const {
+    const QStringList ls = m_versionView->toPlainText().split(QLatin1Char('\n'));
+    return ls.size() > lines ? ls.mid(ls.size() - lines).join(QLatin1Char('\n'))
+                             : ls.join(QLatin1Char('\n'));
+}
+
 void MainWindow::appendUpdateLog(const QString &chunk, int step) {
     if (chunk.isEmpty()) return;
     if (step > 0) {

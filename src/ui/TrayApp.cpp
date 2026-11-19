@@ -22,6 +22,8 @@
 #include <QtNetwork/QNetworkReply>
 #include <QtNetwork/QNetworkRequest>
 #include <QtWidgets/QApplication>
+#include <QtWidgets/QAbstractButton>
+#include <QtWidgets/QPushButton>
 #include <QtWidgets/QMenu>
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QSystemTrayIcon>
@@ -131,9 +133,13 @@ TrayApp::TrayApp(QObject *parent) : QObject(parent) {
         m_win->finishUpdate(ok, code);
         m_actUpdate->setText(s("update_to_latest"));
         m_actUpdate->setEnabled(true);
-        notify(s("strata_update"),
-               ok ? s("update_complete_verifying_version")
-                  : s("update_failed_exit_n_see_update_local_lo_2").arg(code));
+        if (ok) {
+            notify(s("strata_update"), s("update_complete_verifying_version"));
+        } else {
+            const QString detail = m_win->updateLogTail();   // 更新页里滚动收集的实时日志
+            alert(s("action_failed_title"),
+                  s("update_failed_exit_n_see_update_local_lo_2").arg(code), detail);
+        }
         m_local = Probe::probeLocal();
         refreshHealth();
         checkVersion();
@@ -184,6 +190,19 @@ void TrayApp::showWindow() { m_win->showWindow(); }
 
 void TrayApp::notify(const QString &title, const QString &body) {
     m_tray->showMessage(title, body, QSystemTrayIcon::Information, 3000);
+}
+
+void TrayApp::alert(const QString &title, const QString &body, const QString &detail) {
+    // 不用 QMessageBox::critical 的模态阻塞语义 — 用 warning + 详情文本，
+    // 让用户既能立刻看到「出错了」，也能看到脚本到底报了什么。
+    QMessageBox box(QMessageBox::Warning, title, body, QMessageBox::Ok, m_win);
+    box.setWindowTitle(title);
+    if (!detail.isEmpty()) box.setDetailedText(detail);   // 详情里有「显示详情…」按钮
+    QPushButton *openLog = box.addButton(s("open_log_file"), QMessageBox::ActionRole);
+    box.setDefaultButton(QMessageBox::Ok);
+    box.exec();
+    if (box.clickedButton() == openLog)
+        QDesktopServices::openUrl(QUrl::fromLocalFile(Config::instance().logFile()));
 }
 
 void TrayApp::refreshHealth() {
@@ -241,20 +260,40 @@ void TrayApp::updateUi() {
 
 void TrayApp::doStart() {
     auto *p = new QProcess(this);
-    // 进程根本拉不起来（路径错 / 权限问题）时也要给出提示，不能静默"点了没反应"
-    connect(p, &QProcess::errorOccurred, this, [this, p](QProcess::ProcessError e) {
+    // 收集脚本输出，失败时作为弹窗详情（stratactl.py 在 Windows 输出 GBK 中文）
+    auto *buf = new QByteArray();
+    auto collect = [buf, p] {
+        *buf += p->readAllStandardOutput();
+        *buf += p->readAllStandardError();
+        if (buf->size() > 16000) buf->remove(0, buf->size() - 16000);   // 只留尾部
+    };
+    connect(p, &QProcess::readyReadStandardOutput, this, collect);
+    connect(p, &QProcess::readyReadStandardError, this, collect);
+
+    // 进程根本拉不起来（路径错 / 权限问题）时也要弹窗，不能静默"点了没反应"
+    connect(p, &QProcess::errorOccurred, this, [this, p, buf](QProcess::ProcessError e) {
         if (e == QProcess::FailedToStart) {
-            notify(QStringLiteral("Strata"),
-                   s("start_failed_hint"));
+            const QString detail = QStringLiteral("program: %1\nargs: %2")
+                .arg(Config::instance().python(), Config::instance().ctl());
+            alert(s("start_failed_title"), s("start_failed_hint"), detail);
             refreshHealth();
         }
     });
-    connect(p, &QProcess::finished, this, [this, p](int code, QProcess::ExitStatus) {
+    connect(p, &QProcess::finished, this, [this, p, buf](int code, QProcess::ExitStatus status) {
         p->deleteLater();
-        if (code == 0) notify(QStringLiteral("Strata"),
-                              s("starting_loading_model"));
-        else if (code != 0)
-            notify(QStringLiteral("Strata"), s("start_failed_log").arg(code));
+        const QString out = QString::fromLocal8Bit(*buf).trimmed();
+        delete buf;
+        if (code == 0 && status == QProcess::NormalExit) {
+            notify(QStringLiteral("Strata"), s("starting_loading_model"));
+        } else {
+            // 取输出末尾若干行作为「显示详情」，用户一眼能看到真实报错
+            QString detail = out;
+            const QStringList lines = out.split(QLatin1Char('\n'));
+            if (lines.size() > 24)
+                detail = lines.mid(lines.size() - 24).join(QLatin1Char('\n'));
+            alert(s("start_failed_title"),
+                  s("start_failed_log").arg(code), detail);
+        }
         m_local = Probe::probeLocal();
         refreshHealth();
     });
@@ -264,9 +303,29 @@ void TrayApp::doStart() {
 
 void TrayApp::doStop() {
     auto *p = new QProcess(this);
-    connect(p, &QProcess::finished, this, [this, p](int, QProcess::ExitStatus) {
+    auto *buf = new QByteArray();
+    auto collect = [buf, p] {
+        *buf += p->readAllStandardOutput();
+        *buf += p->readAllStandardError();
+    };
+    connect(p, &QProcess::readyReadStandardOutput, this, collect);
+    connect(p, &QProcess::readyReadStandardError, this, collect);
+    connect(p, &QProcess::errorOccurred, this, [this](QProcess::ProcessError e) {
+        if (e == QProcess::FailedToStart)
+            alert(s("action_failed_title"), s("stop_failed_hint"));
+    });
+    connect(p, &QProcess::finished, this, [this, p, buf](int code, QProcess::ExitStatus status) {
         p->deleteLater();
-        notify(QStringLiteral("Strata"), s("stopped_vram_released"));
+        const QString out = QString::fromLocal8Bit(*buf).trimmed();
+        delete buf;
+        if (code == 0 && status == QProcess::NormalExit)
+            notify(QStringLiteral("Strata"), s("stopped_vram_released"));
+        else {
+            QString detail = out;
+            const QStringList lines = out.split(QLatin1Char('\n'));
+            if (lines.size() > 16) detail = lines.mid(lines.size() - 16).join(QLatin1Char('\n'));
+            alert(s("action_failed_title"), s("stop_failed_log").arg(code), detail);
+        }
         m_local = Probe::probeLocal();
         refreshHealth();
     });
