@@ -54,6 +54,7 @@ protected:
 
 private:
     void buildUi();
+    void applyHandCursors();           // 所有可点击控件悬停时显示手型光标
     void applyTitleBarTheme();
     void applySettingsButtonStyle();
     void refreshActionButtons();

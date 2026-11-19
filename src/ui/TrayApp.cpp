@@ -17,6 +17,7 @@
 #include <QtGui/QDesktopServices>
 #include <QtGui/QIcon>
 #include <QtNetwork/QLocalServer>
+#include <QtGui/QCursor>
 #include <QtNetwork/QLocalSocket>
 #include <QtNetwork/QNetworkAccessManager>
 #include <QtNetwork/QNetworkReply>
@@ -53,6 +54,7 @@ TrayApp::TrayApp(QObject *parent) : QObject(parent) {
     m_tray->setToolTip(s("app_title"));
 
     m_menu = new QMenu();
+    m_menu->setCursor(QCursor(Qt::PointingHandCursor));  // 菜单条目悬停手型
     m_actStatus = m_menu->addAction(QString());
     m_actStatus->setEnabled(false);
     m_menu->addSeparator();

@@ -20,6 +20,7 @@
 #include <QtGui/QShortcut>
 #include <QtGui/QShowEvent>
 #include <QtGui/QTextCharFormat>
+#include <QtWidgets/QAbstractButton>
 #include <QtWidgets/QCheckBox>
 #include <QtWidgets/QFrame>
 #include <QtWidgets/QHBoxLayout>
@@ -28,6 +29,7 @@
 #include <QtWidgets/QProgressBar>
 #include <QtWidgets/QPushButton>
 #include <QtWidgets/QSizePolicy>
+#include <QtWidgets/QTabBar>
 #include <QtWidgets/QTabWidget>
 #include <QtWidgets/QTextEdit>
 #include <QtWidgets/QVBoxLayout>
@@ -98,6 +100,7 @@ MainWindow::MainWindow(QWidget *parent) : QWidget(parent) {
     setMinimumSize(560, 440);
     resize(680, 540);
     buildUi();
+    applyHandCursors();   // 统一交互反馈：按钮 / 复选框 / Tab 标签悬停即手型
     retranslateUi();
     refreshLog();
     applyTitleBarTheme();
@@ -134,6 +137,20 @@ MainWindow::MainWindow(QWidget *parent) : QWidget(parent) {
     auto *hideShortcut = new QShortcut(QKeySequence(Qt::Key_Escape), this);
     hideShortcut->setContext(Qt::WindowShortcut);
     connect(hideShortcut, &QShortcut::activated, this, [this] { hide(); });
+}
+
+void MainWindow::applyHandCursors() {
+    // 统一交互反馈：所有可点击控件悬停时显示手型光标
+    // QAbstractButton 覆盖了 QPushButton / QCheckBox / QRadioButton / QToolButton
+    const QCursor hand(Qt::PointingHandCursor);
+    const auto buttons = findChildren<QAbstractButton *>();
+    for (QAbstractButton *b : buttons) b->setCursor(hand);
+    // Tab 标签本身不是 button，单独处理
+    const auto tabBars = findChildren<QTabBar *>();
+    for (QTabBar *bar : tabBars) bar->setCursor(hand);
+    // 弹出菜单里的条目也用手型
+    const auto menus = findChildren<QMenu *>();
+    for (QMenu *menu : menus) menu->setCursor(hand);
 }
 
 void MainWindow::buildUi() {
