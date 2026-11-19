@@ -26,6 +26,10 @@
 #include <QtWidgets/QMessageBox>
 #include <QtWidgets/QSystemTrayIcon>
 
+#ifndef STRATATRAY_VERSION
+#define STRATATRAY_VERSION "0.1.0"
+#endif
+
 static inline QString s(const char *key) { return I18n::t(key); }
 
 QString TrayApp::ipcName() { return QStringLiteral("StrataTray_SingleInstance"); }
@@ -68,6 +72,10 @@ TrayApp::TrayApp(QObject *parent) : QObject(parent) {
     m_langMenu = LanguageMenu::create(m_menu, this);
     m_themeMenu = ThemeMenu::create(m_menu, this);
     m_actQuit = m_menu->addAction(QString());
+    m_menu->addSeparator();
+    m_actTrayVersion = m_menu->addAction(
+        QStringLiteral("StrataTray v") + QStringLiteral(STRATATRAY_VERSION));
+    m_actTrayVersion->setEnabled(false);
 
     connect(m_actShow, &QAction::triggered, this, [this] { showWindow(); });
     connect(m_actStart, &QAction::triggered, this, [this] { doStart(); });

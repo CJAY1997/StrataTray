@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(StrataTray LANGUAGES CXX)
+project(StrataTray VERSION 0.1.0 LANGUAGES CXX)
 
 # ---- Qt 自动化：moc / rcc / uic（.h 中的 Q_OBJECT 由 AUTOMOC 处理）----
 set(CMAKE_AUTOMOC ON)
@@ -32,6 +32,7 @@ endif()
 # WIN32 子系统：运行时不弹出黑框控制台
 add_executable(StrataTray WIN32 ${APP_SOURCES})
 target_include_directories(StrataTray PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+target_compile_definitions(StrataTray PRIVATE STRATATRAY_VERSION="${PROJECT_VERSION}")
 
 target_link_libraries(StrataTray PRIVATE
     Qt${QT_VERSION_MAJOR}::Core

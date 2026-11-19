@@ -48,6 +48,10 @@
 
 #include <tuple>
 
+#ifndef STRATATRAY_VERSION
+#define STRATATRAY_VERSION "0.1.0"     // 未由 CMake 注入时的兜底
+#endif
+
 static inline QString L(const char *key) { return I18n::t(key); }
 
 // 调色板占位符渲染：@{token} -> 当前主题颜色（单次替换，不会链式覆盖）
@@ -156,6 +160,12 @@ void MainWindow::buildUi() {
     connect(m_actOpenDir, &QAction::triggered, this, [] {
         QDesktopServices::openUrl(QUrl::fromLocalFile(Config::instance().root()));
     });
+
+    // 菜单底部显示托盘程序自身版本（区别于右卡片的 Strata 本体版本）
+    m_settingsMenu->addSeparator();
+    m_actTrayVersion = m_settingsMenu->addAction(
+        QStringLiteral("StrataTray v") + QStringLiteral(STRATATRAY_VERSION));
+    m_actTrayVersion->setEnabled(false);   // 纯展示，不可点击
 
     auto *cards = new QHBoxLayout();
     cards->setSpacing(12);

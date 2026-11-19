@@ -47,6 +47,7 @@ private:
     QMenu *m_menu = nullptr, *m_langMenu = nullptr, *m_themeMenu = nullptr;
     QAction *m_actStatus = nullptr, *m_actShow = nullptr, *m_actStart = nullptr;
     QAction *m_actStop = nullptr, *m_actOpen = nullptr, *m_actVersion = nullptr;
+    QAction *m_actTrayVersion = nullptr;
     QAction *m_actCheck = nullptr, *m_actUpdate = nullptr, *m_actAutoRun = nullptr;
     QAction *m_actQuit = nullptr;
     QNetworkAccessManager *m_nam = nullptr;
