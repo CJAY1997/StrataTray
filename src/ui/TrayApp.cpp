@@ -241,10 +241,20 @@ void TrayApp::updateUi() {
 
 void TrayApp::doStart() {
     auto *p = new QProcess(this);
+    // 进程根本拉不起来（路径错 / 权限问题）时也要给出提示，不能静默"点了没反应"
+    connect(p, &QProcess::errorOccurred, this, [this, p](QProcess::ProcessError e) {
+        if (e == QProcess::FailedToStart) {
+            notify(QStringLiteral("Strata"),
+                   s("start_failed_hint"));
+            refreshHealth();
+        }
+    });
     connect(p, &QProcess::finished, this, [this, p](int code, QProcess::ExitStatus) {
         p->deleteLater();
         if (code == 0) notify(QStringLiteral("Strata"),
                               s("starting_loading_model"));
+        else if (code != 0)
+            notify(QStringLiteral("Strata"), s("start_failed_log").arg(code));
         m_local = Probe::probeLocal();
         refreshHealth();
     });

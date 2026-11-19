@@ -70,6 +70,8 @@
   "stage_pull": "Pull upstream",
   "stage_reapply": "Reapply local layer",
   "stage_stop": "Stop service",
+  "start_failed_hint": "Could not launch the start script. Check STRATA_PATH and the messages log.",
+  "start_failed_log": "Start script exited with code %1. See strata-server-bg.log for details.",
   "start_service": "Start Service",
   "starting": "Starting",
   "starting_loading_model": "Starting, loading model…",

@@ -70,6 +70,8 @@
   "stage_pull": "拉取官方新版",
   "stage_reapply": "重新接入定制层",
   "stage_stop": "停止服务",
+  "start_failed_hint": "无法启动脚本，请检查 STRATA_PATH 是否指向正确的 Strata 目录",
+  "start_failed_log": "启动脚本失败（退出码 %1），详见 strata-server-bg.log",
   "start_service": "启动服务",
   "starting": "启动",
   "starting_loading_model": "已发起启动，正在加载模型…",
